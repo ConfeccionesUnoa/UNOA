@@ -1,0 +1,80 @@
+// app global css in SCSS form
+
+// Color palette UNOA
+$unoa-primary: #003366;
+$unoa-secondary: #C41E3A;
+$unoa-accent: #D4AF37;
+
+// Global theme colors
+:root {
+  --unoa-primary: #{$unoa-primary};
+  --unoa-secondary: #{$unoa-secondary};
+  --unoa-accent: #{$unoa-accent};
+}
+
+// Body and general styles
+body {
+  background-color: #f8f8f8;
+}
+
+// Page container
+.q-page {
+  background-color: #ffffff;
+}
+
+// Links
+a {
+  color: $unoa-primary;
+  
+  &:hover {
+    color: $unoa-secondary;
+  }
+}
+
+// Buttons
+.q-btn {
+  &.bg-primary,
+  &.text-primary {
+    &:hover {
+      background-color: darken($unoa-primary, 5%);
+    }
+  }
+}
+
+// Cards
+.q-card {
+  border: 1px solid #e0e0e0;
+  border-top: 3px solid $unoa-accent;
+}
+
+// Tables
+.q-table {
+  --q-table-row-height: 48px;
+  
+  thead tr {
+    background-color: $unoa-primary;
+    
+    th {
+      color: white;
+      font-weight: 600;
+    }
+  }
+  
+  tbody tr:hover {
+    background-color: rgba($unoa-primary, 0.05);
+  }
+}
+
+// Badges and chips
+.q-badge {
+  background-color: $unoa-secondary;
+}
+
+// Focus states
+.q-field__control,
+.q-input__control,
+.q-textarea__control {
+  &:focus-within {
+    border-color: $unoa-primary !important;
+  }
+}

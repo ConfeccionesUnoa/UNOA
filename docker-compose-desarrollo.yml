@@ -1,0 +1,49 @@
+version: "3.7"
+services:
+  dev-unoa-frontend:
+    build:
+      context: ./frontend-nuevo/
+      target: 'develop-stage'
+    image: dev-unoa-frontend
+    container_name: dev-unoa-frontend
+    command: sh -c 'npm install && quasar dev'
+    ports:
+      - 9000:9000
+    volumes:
+      - ./frontend-nuevo:/app
+    restart: "no"
+    depends_on:
+      - dev-unoa-backend
+  dev-unoa-backend:
+    build:
+      dockerfile: Dockerfile
+      context: backend/
+      args:
+        requirements: requirements/desarrollo.txt
+    image: dev-unoa-backend
+    restart: "no"
+    container_name: dev-unoa-backend
+    command: sh -c 'python /app/manage.py migrate && python /app/manage.py runserver
+      0.0.0.0:8000'
+    ports:
+      - 8000:8000
+    volumes:
+      - ./backend:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.desarrollo
+    depends_on:
+      - dev-unoa-db
+  dev-unoa-db:
+    restart: "no"
+    image: postgres:alpine
+    container_name: dev-unoa-db
+    ports:
+      - 5439:5432
+    environment:
+      - POSTGRES_USER=unoa
+      - POSTGRES_PASSWORD=unoa
+      - POSTGRES_DB=unoa
+    volumes:
+      - unoa_postgresql_data_desarrollo:/var/lib/postgresql/data
+volumes:
+  unoa_postgresql_data_desarrollo:
