@@ -15,7 +15,7 @@
                         <template v-slot:top-left>
                             <Can I="create" an="Inventario">
                                 <q-btn unelevated rounded icon="add" color="primary" @click="creating"
-                                    label="Agregarrrr" />
+                                    label="Agregar" />
                                 <q-space />
                             </Can>
                         </template>
