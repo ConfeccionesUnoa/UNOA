@@ -1,10 +1,17 @@
 from rest_framework import serializers
-from .models import Inventario, IngresoInventario, Proveedor
+from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria
 
 
 class ProveedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Proveedor
+        fields = ['uuid', 'nombre']
+        read_only_fields = ['uuid']
+
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
         fields = ['uuid', 'nombre']
         read_only_fields = ['uuid']
 
@@ -47,3 +54,24 @@ class InventarioCreateUpdateSerializer(serializers.ModelSerializer):
         model = Inventario
         fields = ['uuid', 'codigo', 'nombre', 'descripcion', 'observaciones', 'proveedor', 'cantidad', 'valor_ingreso', 'numero_factura', 'fecha', 'precio_unitario', 'categoria', 'estado']
         read_only_fields = ['uuid']
+
+
+class ProgramacionInsumoSerializer(serializers.ModelSerializer):
+    inventario = InventarioListRetrieveSerializer(read_only=True)
+    inventario_uuid = serializers.SlugRelatedField(queryset=Inventario.objects.all(), slug_field='uuid', write_only=True, source='inventario')
+
+    class Meta:
+        model = ProgramacionInsumo
+        fields = ['uuid', 'programacion', 'inventario', 'inventario_uuid', 'cantidad', 'created']
+        read_only_fields = ['uuid', 'created', 'inventario']
+
+
+class ProgramacionSerializer(serializers.ModelSerializer):
+    proveedor = ProveedorSerializer(read_only=True)
+    proveedor_uuid = serializers.SlugRelatedField(queryset=Proveedor.objects.all(), slug_field='uuid', write_only=True, source='proveedor', allow_null=True, required=False)
+    insumos = ProgramacionInsumoSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Programacion
+        fields = ['uuid', 'numero_orden', 'codigo', 'descripcion', 'proveedor', 'proveedor_uuid', 'insumos', 'created']
+        read_only_fields = ['uuid', 'created', 'insumos']

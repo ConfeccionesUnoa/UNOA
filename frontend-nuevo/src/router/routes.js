@@ -6,7 +6,9 @@ const routes = [
     children: [
       { path: '', name: 'index', component: () => import('pages/IndexPage.vue'), meta: { requiresAuth: true } },
       { path: 'usuarios', name: 'usuarios', component: () => import('pages/UsuariosPage.vue'), meta: { requiresAuth: true } },
-      { path: 'inventario', name: 'inventario', component: () => import('pages/InventarioPage.vue'), meta: { requiresAuth: true } }
+      { path: 'parametros', name: 'parametros', component: () => import('pages/ParametrosPage.vue'), meta: { requiresAuth: true } },
+      { path: 'inventario', name: 'inventario', component: () => import('pages/InventarioPage.vue'), meta: { requiresAuth: true } },
+      { path: 'programacion', name: 'programacion', component: () => import('pages/ProgramacionPage.vue'), meta: { requiresAuth: true } }
     ]
   },
   { path: '/login', name: 'login', component: () => import('pages/LoginPage.vue') }

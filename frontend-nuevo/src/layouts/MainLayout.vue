@@ -66,6 +66,15 @@
             </q-item>
           </Can>
 
+          <q-item clickable :to="{ name: 'parametros' }" exact v-ripple exact-active-class="drawer-active">
+            <q-item-section avatar>
+              <q-icon name="settings" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Parámetros</q-item-label>
+            </q-item-section>
+          </q-item>
+
           <Can I="read" a="'Inventario'">
             <q-item clickable :to="{ name: 'inventario' }" exact v-ripple exact-active-class="drawer-active">
               <q-item-section avatar>
@@ -73,6 +82,17 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>Inventario</q-item-label>
+              </q-item-section>
+            </q-item>
+          </Can>
+
+          <Can I="read" a="'Programacion'">
+            <q-item clickable :to="{ name: 'programacion' }" exact v-ripple exact-active-class="drawer-active">
+              <q-item-section avatar>
+                <q-icon name="calendar_month" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Programación</q-item-label>
               </q-item-section>
             </q-item>
           </Can>

@@ -8,13 +8,16 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from config.pagination import Paginacion
-from .models import Inventario, IngresoInventario, Proveedor
+from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria
 from .serializers import (
     InventarioListRetrieveSerializer,
     InventarioCreateUpdateSerializer,
     IngresoInventarioListSerializer,
     IngresoInventarioCreateSerializer,
     ProveedorSerializer,
+    CategoriaSerializer,
+    ProgramacionSerializer,
+    ProgramacionInsumoSerializer,
 )
 from config.mixins import ProtectedForeignKeyDeleteMixin
 
@@ -125,3 +128,90 @@ class ProveedorListCreateAPIView(ListCreateAPIView):
     queryset = Proveedor.objects.all()
     serializer_class = ProveedorSerializer
     permission_classes = (IsAuthenticated,)
+
+
+class ProveedorRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Proveedor.objects.all()
+    serializer_class = ProveedorSerializer
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated,)
+
+
+class CategoriaListCreateAPIView(ListCreateAPIView):
+    queryset = Categoria.objects.all()
+    serializer_class = CategoriaSerializer
+    permission_classes = (IsAuthenticated,)
+
+
+class CategoriaRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Categoria.objects.all()
+    serializer_class = CategoriaSerializer
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated,)
+
+
+class ProgramacionListCreateAPIView(ListCreateAPIView):
+    """Listar y crear programaciones (órdenes)"""
+    queryset = Programacion.objects.all()
+    serializer_class = ProgramacionSerializer
+    permission_classes = (IsAuthenticated,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('numero_orden', 'codigo', 'descripcion', 'proveedor__nombre')
+
+    def get_queryset(self):
+        return Programacion.objects.all()
+
+
+class ProgramacionInsumoCreateAPIView(ListCreateAPIView):
+    """Listar insumos de una programacion y crear solicitudes de insumos que afecten inventario"""
+    serializer_class = ProgramacionInsumoSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        uuid = self.kwargs.get('uuid')
+        return ProgramacionInsumo.objects.filter(programacion__uuid=uuid)
+
+    def post(self, request, *args, **kwargs):
+        # Esperamos un payload con lista de insumos: [{ 'inventario': '<uuid>', 'cantidad': 1 }, ...]
+        uuid = self.kwargs.get('uuid')
+        try:
+            programacion = Programacion.objects.get(uuid=uuid)
+        except Programacion.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        items = request.data.get('items') if isinstance(request.data, dict) else request.data
+        if not items:
+            return Response({'detail': 'No items provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        created_items = []
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                for it in items:
+                    inv_uuid = it.get('inventario') or it.get('inventario_uuid')
+                    cantidad = int(it.get('cantidad') or 0)
+                    if not inv_uuid or cantidad <= 0:
+                        raise ValueError('inventario and cantidad required')
+
+                    inventario = Inventario.objects.select_for_update().get(uuid=inv_uuid)
+                    if inventario.cantidad < cantidad:
+                        raise ValueError(f'Inventario insuficiente para {inventario.codigo}')
+
+                    # Restar del inventario
+                    inventario.cantidad = inventario.cantidad - cantidad
+                    inventario.save()
+
+                    # Crear registro de ProgramacionInsumo
+                    pi = ProgramacionInsumo.objects.create(
+                        programacion=programacion,
+                        inventario=inventario,
+                        cantidad=cantidad
+                    )
+                    created_items.append(pi)
+        except Inventario.DoesNotExist:
+            return Response({'detail': 'Inventario not found'}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        output = ProgramacionInsumoSerializer(created_items, many=True)
+        return Response(output.data, status=status.HTTP_201_CREATED)

@@ -145,6 +145,20 @@ class Proveedor(models.Model):
         return self.nombre
 
 
+class Categoria(models.Model):
+    """Categoría de productos"""
+    uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
+    nombre = models.CharField(max_length=255, verbose_name='nombre', unique=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'categoria'
+        verbose_name_plural = 'categorias'
+
+    def __str__(self):
+        return self.nombre
+
+
 class IngresoInventario(TimeStampedModel):
     """Registro histórico de ingresos al inventario"""
     uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
@@ -168,3 +182,38 @@ class IngresoInventario(TimeStampedModel):
 
     def __str__(self):
         return f"Ingreso {self.cantidad} - {self.inventario.codigo} - {self.fecha}"
+
+
+class Programacion(TimeStampedModel):
+    """Representa una orden de programación"""
+    uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
+    numero_orden = models.CharField(max_length=100, verbose_name='número de orden')
+    codigo = models.CharField(max_length=100, verbose_name='código')
+    descripcion = models.TextField(blank=True, null=True, verbose_name='descripción')
+    proveedor = models.ForeignKey('Proveedor', null=True, blank=True, on_delete=models.SET_NULL, related_name='programaciones')
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'programacion'
+        verbose_name_plural = 'programaciones'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"{self.numero_orden} - {self.codigo}"
+
+
+class ProgramacionInsumo(TimeStampedModel):
+    """Registro de insumos solicitados para una programación. También actúa como historial."""
+    uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
+    programacion = models.ForeignKey(Programacion, on_delete=models.CASCADE, related_name='insumos')
+    inventario = models.ForeignKey(Inventario, on_delete=models.PROTECT, related_name='salidas')
+    cantidad = models.IntegerField(verbose_name='cantidad')
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'programacion insumo'
+        verbose_name_plural = 'programaciones insumos'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"{self.programacion.numero_orden} - {self.inventario.codigo} - {self.cantidad}"

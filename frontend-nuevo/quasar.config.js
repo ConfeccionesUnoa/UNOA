@@ -15,7 +15,8 @@ export default defineConfig((ctx) => {
     boot: [
       'i18n',
       'axios',
-      'casl'
+      'casl',
+      'unregister-sw'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css

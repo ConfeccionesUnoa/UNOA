@@ -5,14 +5,6 @@
                 <div>
                     <q-space />
 
-                    <!-- Botón AGREGAR fuera de la tabla para garantizar visibilidad -->
-                    <div class="row items-center q-mb-sm">
-                        <Can I="create" an="Inventario">
-                            <q-btn unelevated rounded icon="add" color="primary" @click="creating" label="Agregar" />
-                        </Can>
-                        <q-space />
-                    </div>
-
                     <q-table dense :rows="data" :columns="columns" :loading="visible"
                         :loading-label="visible ? 'Cargando...' : ''" rows-per-page-label="Filas por página"
                         :no-data-label="visible ? 'No hay datos' : ''"
@@ -23,7 +15,7 @@
                         <template v-slot:top-left>
                             <Can I="create" an="Inventario">
                                 <q-btn unelevated rounded icon="add" color="primary" @click="creating"
-                                    label="Agregar" />
+                                    label="Agregarrrr" />
                                 <q-space />
                             </Can>
                         </template>
@@ -121,6 +113,11 @@
             <q-inner-loading :showing="visible">
                 <q-spinner-pie color="primary" size="70px" />
             </q-inner-loading>
+
+            <div class="row q-mt-md q-pt-sm">
+                <q-space />
+                <q-btn label="Descargar Excel" :disable="visible" icon="file_download" color="primary" @click="downloadExcel" />
+            </div>
         </div>
 
         <q-dialog v-model="toolbar" persistent>
@@ -191,7 +188,7 @@
                                     :rules="[val => val >= 0 || 'El precio debe ser >= 0']" />
                             </div>
                             <div class="col-xs-12 col-sm-4">
-                                <q-input filled v-model="categoria" label="Categoría *" lazy-rules dense
+                                <q-select filled v-model="categoria" :options="categoriaOptions" option-value="value" option-label="label" label="Categoría *" lazy-rules dense
                                     :rules="[val => val && val.length > 0 || 'El campo es obligatorio']" />
                             </div>
                         </div>
@@ -370,11 +367,12 @@ $section-bg: #f9f9f9;
 
 <script setup>
 // Importacion de librerias
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { api } from 'src/boot/axios'
 import { ability } from 'src/services/ability'
 import { useAuthStore } from 'src/stores/auth'
 import Swal from 'sweetalert2'
+import * as XLSX from 'xlsx'
 
 // Constantes
 const path = 'core/inventario/'
@@ -398,7 +396,14 @@ const estadoOptions = ref([
     { label: 'Activo', value: 'AC' },
     { label: 'Inactivo', value: 'IN' }
 ])
-const columns = ref([
+
+const categoriaOptions = ref([
+    { label: 'CORTE', value: 'CORTE' },
+    { label: 'CONFECCIÓN', value: 'CONFECCIÓN' },
+    { label: 'PRESENTACIÓN', value: 'PRESENTACIÓN' },
+    { label: 'ACCESORIOS', value: 'ACCESORIOS' }
+])
+const columns = ref([ 
     { name: 'codigo', align: 'center', label: 'Código', field: 'codigo', sortable: true },
     { name: 'nombre', align: 'center', label: 'Nombre', field: 'nombre', sortable: true },
     { name: 'proveedor', align: 'center', label: 'Proveedor', field: 'proveedor', sortable: true },
@@ -442,6 +447,10 @@ onMounted(() => {
             { action: 'manage', subject: 'all' }
         ])
     }
+    const handler = () => loadTable()
+    window.addEventListener('inventario-updated', handler)
+    // cleanup when component unmounts
+    try { onUnmounted(() => { window.removeEventListener('inventario-updated', handler) }) } catch (e) {}
 })
 
 // Funciones
@@ -668,5 +677,53 @@ async function onSubmitIngreso() {
         console.error('Error al registrar ingreso:', error)
         Swal.fire({ title: 'Error', text: 'No se pudo registrar el ingreso', icon: 'error' })
     }
+}
+
+function getVisibleRows() {
+    let rows = data.value || []
+    const f = filter.value ? String(filter.value).toLowerCase() : null
+    if (f) {
+        rows = rows.filter(r => {
+            return Object.values(r).some(v => (v !== null && v !== undefined) && String(v).toLowerCase().includes(f))
+        })
+    }
+    const { page, rowsPerPage } = pagination.value || { page: 1, rowsPerPage: 0 }
+    if (!rowsPerPage || rowsPerPage === 0) return rows
+    const start = (page - 1) * rowsPerPage
+    return rows.slice(start, start + rowsPerPage)
+}
+
+async function downloadExcel() {
+    const rows = getVisibleRows()
+    if (!rows.length) {
+        Swal.fire({ title: 'No hay datos', text: 'No hay registros para descargar', icon: 'info' })
+        return
+    }
+
+    const headers = columns.value.map(c => ({ key: c.field || c.name, label: c.label }))
+    const sheetData = rows.map(r => {
+        const obj = {}
+        headers.forEach(h => {
+            const key = h.key
+            const value = (r[key] !== undefined && r[key] !== null) ? (typeof r[key] === 'object' ? (r[key].nombre || JSON.stringify(r[key])) : r[key]) : ''
+            obj[h.label] = value
+        })
+        return obj
+    })
+
+    const ws = XLSX.utils.json_to_sheet(sheetData)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventario')
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([wbout], { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const date = new Date().toISOString().slice(0,10)
+    a.download = `inventario_${date}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
 }
 </script>
