@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from config.pagination import Paginacion
-from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria
+from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte
 from .serializers import (
     InventarioListRetrieveSerializer,
     InventarioCreateUpdateSerializer,
@@ -16,6 +16,7 @@ from .serializers import (
     IngresoInventarioCreateSerializer,
     ProveedorSerializer,
     CategoriaSerializer,
+    CorteSerializer,
     ProgramacionSerializer,
     ProgramacionInsumoSerializer,
 )
@@ -215,3 +216,22 @@ class ProgramacionInsumoCreateAPIView(ListCreateAPIView):
 
         output = ProgramacionInsumoSerializer(created_items, many=True)
         return Response(output.data, status=status.HTTP_201_CREATED)
+
+
+class CorteListCreateAPIView(ListCreateAPIView):
+    queryset = None
+    serializer_class = None
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return Corte.objects.all()
+
+    def get_serializer_class(self):
+        return CorteSerializer
+
+
+class CorteRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Corte.objects.all()
+    serializer_class = CorteSerializer
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated,)

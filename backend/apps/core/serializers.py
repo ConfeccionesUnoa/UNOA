@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria
+from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte, CorteDetalle
 
 
 class ProveedorSerializer(serializers.ModelSerializer):
@@ -14,6 +14,47 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = ['uuid', 'nombre']
         read_only_fields = ['uuid']
+
+
+class CorteDetalleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CorteDetalle
+        fields = ['uuid', 'numero', 'proporcion', 'unidades_cortadas', 'ancho', 'largo', 'promedio', 'mtrs_consumidos', 'color', 'created']
+        read_only_fields = ['uuid', 'created']
+
+
+class CorteSerializer(serializers.ModelSerializer):
+    detalles = CorteDetalleSerializer(many=True, read_only=True)
+    detalles_input = CorteDetalleSerializer(many=True, write_only=True, required=False)
+
+    class Meta:
+        model = Corte
+        fields = [
+            'uuid', 'tercero', 'fecha', 'ref', 'tela', 'mtrs_enviados', 'lote', 'orden_produccion', 'notas', 'tallas',
+            'total_unidades', 'total_metros_consumidos', 'mtrs_retazos', 'promedio', 'muestras', 'faltante_tela',
+            'consumo_cantidad', 'consumo_metros_gastados', 'consumo_ancho', 'consumo_largo', 'consumo_promedio', 'sobrante_tela', 'firma_responsable',
+            'detalles', 'detalles_input', 'created'
+        ]
+        read_only_fields = ['uuid', 'created', 'detalles']
+
+    def create(self, validated_data):
+        detalles_input = validated_data.pop('detalles_input', [])
+        corte = Corte.objects.create(**validated_data)
+        for d in detalles_input:
+            CorteDetalle.objects.create(corte=corte, **d)
+        return corte
+
+    def update(self, instance, validated_data):
+        detalles_input = validated_data.pop('detalles_input', None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        if detalles_input is not None:
+            # replace detalles
+            instance.detalles.all().delete()
+            for d in detalles_input:
+                CorteDetalle.objects.create(corte=instance, **d)
+        return instance
 
 
 class IngresoInventarioListSerializer(serializers.ModelSerializer):

@@ -96,6 +96,17 @@
               </q-item-section>
             </q-item>
           </Can>
+          
+          <Can I="read" a="'Corte'">
+            <q-item clickable :to="{ name: 'corte' }" exact v-ripple exact-active-class="drawer-active">
+              <q-item-section avatar>
+                <q-icon name="content_cut" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Corte</q-item-label>
+              </q-item-section>
+            </q-item>
+          </Can>
         </q-list>
       </q-scroll-area>
     </q-drawer>

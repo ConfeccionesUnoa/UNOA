@@ -8,7 +8,8 @@ const routes = [
       { path: 'usuarios', name: 'usuarios', component: () => import('pages/UsuariosPage.vue'), meta: { requiresAuth: true } },
       { path: 'parametros', name: 'parametros', component: () => import('pages/ParametrosPage.vue'), meta: { requiresAuth: true } },
       { path: 'inventario', name: 'inventario', component: () => import('pages/InventarioPage.vue'), meta: { requiresAuth: true } },
-      { path: 'programacion', name: 'programacion', component: () => import('pages/ProgramacionPage.vue'), meta: { requiresAuth: true } }
+      { path: 'programacion', name: 'programacion', component: () => import('pages/ProgramacionPage.vue'), meta: { requiresAuth: true } },
+      { path: 'corte', name: 'corte', component: () => import('pages/CortePage.vue'), meta: { requiresAuth: true } }
     ]
   },
   { path: '/login', name: 'login', component: () => import('pages/LoginPage.vue') }

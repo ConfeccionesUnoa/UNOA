@@ -217,3 +217,65 @@ class ProgramacionInsumo(TimeStampedModel):
 
     def __str__(self):
         return f"{self.programacion.numero_orden} - {self.inventario.codigo} - {self.cantidad}"
+
+
+class Corte(TimeStampedModel):
+    """Representa un informe de corte (cabecera)"""
+    uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
+    tercero = models.CharField(max_length=255, verbose_name='nombre tercero')
+    fecha = models.DateField(blank=True, null=True, verbose_name='fecha')
+    ref = models.CharField(max_length=255, blank=True, null=True, verbose_name='ref')
+    tela = models.CharField(max_length=255, blank=True, null=True, verbose_name='tela')
+    mtrs_enviados = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='mtrs enviados')
+    lote = models.CharField(max_length=255, blank=True, null=True, verbose_name='lote')
+    orden_produccion = models.CharField(max_length=255, blank=True, null=True, verbose_name='orden de produccion')
+    notas = models.TextField(blank=True, null=True, verbose_name='notas')
+    # tallas como JSON serializado en texto (por compatibilidad)
+    tallas = models.TextField(blank=True, null=True, verbose_name='tallas_json')
+    # Campos resumen y consumo (basados en el formulario de corte)
+    total_unidades = models.IntegerField(default=0, verbose_name='total unidades cortadas')
+    total_metros_consumidos = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='total metros consumidos')
+    mtrs_retazos = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='mtrs de retazos')
+    promedio = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='promedio')
+    muestras = models.IntegerField(default=0, verbose_name='muestras')
+    faltante_tela = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='faltante de tela')
+
+    consumo_cantidad = models.IntegerField(default=0, verbose_name='consumo cantidad')
+    consumo_metros_gastados = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='consumo metros gastados')
+    consumo_ancho = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='consumo ancho')
+    consumo_largo = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='consumo largo')
+    consumo_promedio = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='consumo promedio')
+    sobrante_tela = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='sobrante de tela')
+    firma_responsable = models.CharField(max_length=255, blank=True, null=True, verbose_name='firma responsable')
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'corte'
+        verbose_name_plural = 'cortes'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"Corte {self.uuid} - {self.tercero} - {self.fecha}"
+
+
+class CorteDetalle(TimeStampedModel):
+    """Detalle por corte (filas de la tabla de cortes)"""
+    uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
+    corte = models.ForeignKey(Corte, on_delete=models.CASCADE, related_name='detalles')
+    numero = models.IntegerField(default=0, verbose_name='corte_num')
+    proporcion = models.CharField(max_length=100, blank=True, null=True)
+    unidades_cortadas = models.IntegerField(default=0)
+    ancho = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    largo = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    promedio = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    mtrs_consumidos = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    color = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'corte detalle'
+        verbose_name_plural = 'cortes detalles'
+        ordering = ['numero']
+
+    def __str__(self):
+        return f"Detalle {self.numero} - {self.corte.uuid}"
