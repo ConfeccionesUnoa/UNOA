@@ -107,6 +107,17 @@
               </q-item-section>
             </q-item>
           </Can>
+
+          <Can I="read" a="'Presentacion'">
+            <q-item clickable :to="{ name: 'presentacion' }" exact v-ripple exact-active-class="drawer-active">
+              <q-item-section avatar>
+                <q-icon name="assignment_turned_in" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Presentación</q-item-label>
+              </q-item-section>
+            </q-item>
+          </Can>
         </q-list>
       </q-scroll-area>
     </q-drawer>

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte, CorteDetalle
+from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte, CorteDetalle, Presentacion
 
 
 class ProveedorSerializer(serializers.ModelSerializer):
@@ -116,3 +116,30 @@ class ProgramacionSerializer(serializers.ModelSerializer):
         model = Programacion
         fields = ['uuid', 'numero_orden', 'codigo', 'descripcion', 'proveedor', 'proveedor_uuid', 'insumos', 'created']
         read_only_fields = ['uuid', 'created', 'insumos']
+
+
+class PresentacionSerializer(serializers.ModelSerializer):
+    cortes = CorteSerializer(many=True, read_only=True)
+    cortes_input = serializers.PrimaryKeyRelatedField(queryset=Corte.objects.all(), many=True, write_only=True, required=False)
+    programacion_uuid = serializers.SlugRelatedField(queryset=Programacion.objects.all(), slug_field='uuid', write_only=True, source='programacion', allow_null=True, required=False)
+
+    class Meta:
+        model = Presentacion
+        fields = ['uuid', 'programacion', 'programacion_uuid', 'numero_orden', 'fecha', 'referencia', 'estado_proceso', 'fecha_finalizacion', 'cortes', 'cortes_input', 'created']
+        read_only_fields = ['uuid', 'created', 'cortes']
+
+    def create(self, validated_data):
+        cortes_input = validated_data.pop('cortes_input', [])
+        pres = Presentacion.objects.create(**validated_data)
+        if cortes_input:
+            pres.cortes.set(cortes_input)
+        return pres
+
+    def update(self, instance, validated_data):
+        cortes_input = validated_data.pop('cortes_input', None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        if cortes_input is not None:
+            instance.cortes.set(cortes_input)
+        return instance

@@ -397,12 +397,7 @@ const estadoOptions = ref([
     { label: 'Inactivo', value: 'IN' }
 ])
 
-const categoriaOptions = ref([
-    { label: 'CORTE', value: 'CORTE' },
-    { label: 'CONFECCIÓN', value: 'CONFECCIÓN' },
-    { label: 'PRESENTACIÓN', value: 'PRESENTACIÓN' },
-    { label: 'ACCESORIOS', value: 'ACCESORIOS' }
-])
+const categoriaOptions = ref([])
 const columns = ref([ 
     { name: 'codigo', align: 'center', label: 'Código', field: 'codigo', sortable: true },
     { name: 'nombre', align: 'center', label: 'Nombre', field: 'nombre', sortable: true },
@@ -442,6 +437,7 @@ onMounted(() => {
     loadTable()
     setColumns()
     loadProveedores()
+    loadCategorias()
     if (auth.rol === 'AD') {
         ability.update([
             { action: 'manage', subject: 'all' }
@@ -638,6 +634,21 @@ async function loadProveedores() {
         proveedores.value = r.data
     } catch (err) {
         console.error('Error cargando proveedores', err)
+    }
+}
+
+async function loadCategorias() {
+    try {
+        const r = await api.get('core/categoria/')
+        // map to { label, value } where value is the category name (string)
+        categoriaOptions.value = r.data.map(c => ({ label: c.nombre, value: c.nombre }))
+    } catch (err) {
+        console.error('Error cargando categorias', err)
+        // fallback to a minimal set if API fails
+        categoriaOptions.value = [
+            { label: 'CORTE', value: 'CORTE' },
+            { label: 'CONFECCIÓN', value: 'CONFECCIÓN' },
+        ]
     }
 }
 

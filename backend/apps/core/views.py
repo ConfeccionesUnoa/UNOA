@@ -20,6 +20,8 @@ from .serializers import (
     ProgramacionSerializer,
     ProgramacionInsumoSerializer,
 )
+from .models import Presentacion
+from .serializers import PresentacionSerializer
 from config.mixins import ProtectedForeignKeyDeleteMixin
 
 
@@ -233,5 +235,24 @@ class CorteListCreateAPIView(ListCreateAPIView):
 class CorteRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Corte.objects.all()
     serializer_class = CorteSerializer
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated,)
+
+
+class PresentacionListCreateAPIView(ListCreateAPIView):
+    queryset = None
+    serializer_class = None
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return Presentacion.objects.all()
+
+    def get_serializer_class(self):
+        return PresentacionSerializer
+
+
+class PresentacionRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Presentacion.objects.all()
+    serializer_class = PresentacionSerializer
     lookup_field = 'uuid'
     permission_classes = (IsAuthenticated,)

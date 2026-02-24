@@ -12,6 +12,8 @@ from .views import (
     ProgramacionInsumoCreateAPIView,
     CorteListCreateAPIView,
     CorteRetrieveUpdateDestroyAPIView,
+    PresentacionListCreateAPIView,
+    PresentacionRetrieveUpdateDestroyAPIView,
 )
 
 urlpatterns = [
@@ -24,6 +26,8 @@ urlpatterns = [
     path('categoria/<uuid:uuid>/', CategoriaRetrieveUpdateDestroyAPIView.as_view(), name='core-categoria-detail-api'),
     path('corte/', CorteListCreateAPIView.as_view(), name='core-corte-api'),
     path('corte/<uuid:uuid>/', CorteRetrieveUpdateDestroyAPIView.as_view(), name='core-corte-detail-api'),
+    path('presentacion/', PresentacionListCreateAPIView.as_view(), name='core-presentacion-api'),
+    path('presentacion/<uuid:uuid>/', PresentacionRetrieveUpdateDestroyAPIView.as_view(), name='core-presentacion-detail-api'),
     path('programacion/', ProgramacionListCreateAPIView.as_view(), name='core-programacion-api'),
     path('programacion/<uuid:uuid>/', ProgramacionListCreateAPIView.as_view(), name='core-programacion-detail-api'),
     path('programacion/<uuid:uuid>/insumos/', ProgramacionInsumoCreateAPIView.as_view(), name='core-programacion-insumos-api'),

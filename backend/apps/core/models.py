@@ -279,3 +279,34 @@ class CorteDetalle(TimeStampedModel):
 
     def __str__(self):
         return f"Detalle {self.numero} - {self.corte.uuid}"
+
+
+class Presentacion(TimeStampedModel):
+    """Representa el cierre de la producción / entrega para una `Programacion`"""
+    ESTADO_PENDIENTE = 'PEN'
+    ESTADO_EN_PROCESO = 'PRO'
+    ESTADO_FINALIZADO = 'FIN'
+    ESTADOS = (
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_EN_PROCESO, 'En proceso'),
+        (ESTADO_FINALIZADO, 'Finalizado'),
+    )
+
+    uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
+    # Asociamos opcionalmente al registro de programacion para integridad
+    programacion = models.ForeignKey(Programacion, null=True, blank=True, on_delete=models.SET_NULL, related_name='presentaciones')
+    numero_orden = models.CharField(max_length=100, blank=True, null=True, verbose_name='número de orden')
+    fecha = models.DateField(blank=True, null=True, verbose_name='fecha')
+    referencia = models.CharField(max_length=255, blank=True, null=True, verbose_name='referencia')
+    estado_proceso = models.CharField(max_length=3, choices=ESTADOS, default=ESTADO_PENDIENTE, verbose_name='estado del proceso')
+    fecha_finalizacion = models.DateField(blank=True, null=True, verbose_name='fecha de finalizacion')
+    cortes = models.ManyToManyField(Corte, blank=True, related_name='presentaciones')
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'presentacion'
+        verbose_name_plural = 'presentaciones'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"Presentación {self.numero_orden or self.uuid} - {self.estado_proceso}"
