@@ -24,7 +24,7 @@ services:
     image: unoa-backend
     restart: unless-stopped
     container_name: unoa-backend
-    command: sh -c 'python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --worker-class=gevent --worker-connections=1000 --workers=3 --log-level=DEBUG config.wsgi:application --bind 0.0.0.0:8000'
+    command: sh -c 'python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --worker-class=gevent --worker-connections=1000 --workers=1 --log-level=DEBUG config.wsgi:application --bind 0.0.0.0:8000'
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.produccion
       - GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
