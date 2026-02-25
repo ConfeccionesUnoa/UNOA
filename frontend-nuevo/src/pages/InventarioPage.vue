@@ -189,6 +189,7 @@
                             </div>
                             <div class="col-xs-12 col-sm-4">
                                 <q-select filled v-model="categoria" :options="categoriaOptions" option-value="value" option-label="label" label="Categoría *" lazy-rules dense
+                                    emit-value map-options
                                     :rules="[val => val && val.length > 0 || 'El campo es obligatorio']" />
                             </div>
                         </div>
