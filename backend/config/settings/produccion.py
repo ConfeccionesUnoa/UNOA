@@ -1,7 +1,7 @@
 from .base import *  # noqa: F403, F401
 
 DEBUG = False
-ALLOWED_HOSTS = ['64.227.110.12', 'confeccionesunoa.com']
+ALLOWED_HOSTS = ['64.227.110.12', 'app.confeccionesunoa.com']
 
 
 DATABASES = {

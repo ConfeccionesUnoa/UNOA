@@ -27,10 +27,10 @@ DEBUG = False
 
 TEMPLATE_DEBUG = DEBUG
 
-ALLOWED_HOSTS = ['confeccionesunoa.com', '64.227.110.12']
+ALLOWED_HOSTS = ['app.confeccionesunoa.com', '64.227.110.12']
 
 CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = ['https://confeccionesunoa.com', 'http://64.227.110.12']
+CORS_ORIGIN_WHITELIST = ['https://app.confeccionesunoa.com', 'http://64.227.110.12']
 CORS_ALLOW_CREDENTIALS = True
 
 DJANGO_APPS = [
@@ -125,7 +125,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
-SITE_URL = "https://confeccionesunoa.com/"
+SITE_URL = "https://appconfeccionesunoa.com/"
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'public')
 STATIC_URL = f'/{SITE_URL}public/'
