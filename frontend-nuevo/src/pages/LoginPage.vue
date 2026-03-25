@@ -134,7 +134,7 @@ async function login() {
   try {
     loading.value = true
     await auth.login(login_form.value)
-    router.push({ name: 'usuarios' })
+    router.push({ name: 'index' })
   } catch (error) {
     if (error.response && [400, 401].includes(error.response.status)) {
       error_login.value = 'Usuario o contraseña incorrectos'
