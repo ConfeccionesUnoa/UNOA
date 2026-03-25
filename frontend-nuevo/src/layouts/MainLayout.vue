@@ -46,6 +46,7 @@
         <q-list padding separator>
           <q-item-label header class="drawer-header">Menú Principal</q-item-label>
           
+          <!-- Inicio -->
           <q-item clickable :to="{ name: 'index' }" exact v-ripple exact-active-class="drawer-active">
             <q-item-section avatar>
               <q-icon name="home" />
@@ -55,26 +56,53 @@
             </q-item-section>
           </q-item>
 
+          <!-- Usuarios (Desplegable) -->
           <Can I="read" a="'Usuarios'">
-            <q-item clickable :to="{ name: 'usuarios' }" exact v-ripple exact-active-class="drawer-active">
-              <q-item-section avatar>
-                <q-icon name="person" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>Usuarios</q-item-label>
-              </q-item-section>
-            </q-item>
+            <q-expansion-item icon="group" label="Usuarios">
+              <q-list separator padding style="background: #f5f5f5;">
+                <q-item clickable :to="{ name: 'usuarios' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="person" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Usuarios</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-expansion-item>
           </Can>
 
-          <q-item clickable :to="{ name: 'parametros' }" exact v-ripple exact-active-class="drawer-active">
-            <q-item-section avatar>
-              <q-icon name="settings" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>Parámetros</q-item-label>
-            </q-item-section>
-          </q-item>
+          <!-- Parámetros (Desplegable) -->
+          <q-expansion-item icon="settings" label="Parámetros">
+            <q-list separator padding style="background: #f5f5f5;">
+              <q-item clickable :to="{ name: 'proveedores' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                <q-item-section avatar>
+                  <q-icon name="tune" size="sm" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Proveedores</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-item clickable :to="{ name: 'categorias' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                <q-item-section avatar>
+                  <q-icon name="category" size="sm" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Categorías</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-item clickable :to="{ name: 'clientes' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                <q-item-section avatar>
+                  <q-icon name="business" size="sm" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Clientes</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-expansion-item>
 
+          <!-- Inventario -->
           <Can I="read" a="'Inventario'">
             <q-item clickable :to="{ name: 'inventario' }" exact v-ripple exact-active-class="drawer-active">
               <q-item-section avatar>
@@ -86,38 +114,52 @@
             </q-item>
           </Can>
 
-          <Can I="read" a="'Programacion'">
-            <q-item clickable :to="{ name: 'programacion' }" exact v-ripple exact-active-class="drawer-active">
-              <q-item-section avatar>
-                <q-icon name="calendar_month" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>Programación</q-item-label>
-              </q-item-section>
-            </q-item>
-          </Can>
-          
-          <Can I="read" a="'Corte'">
-            <q-item clickable :to="{ name: 'corte' }" exact v-ripple exact-active-class="drawer-active">
-              <q-item-section avatar>
-                <q-icon name="content_cut" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>Corte</q-item-label>
-              </q-item-section>
-            </q-item>
-          </Can>
+          <!-- Procesos (Desplegable) -->
+          <q-expansion-item icon="precision_manufacturing" label="Procesos">
+            <q-list separator padding style="background: #f5f5f5;">
+              <Can I="read" a="'Programacion'">
+                <q-item clickable :to="{ name: 'programacion' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="calendar_month" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Programación</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </Can>
+              
+              <Can I="read" a="'Corte'">
+                <q-item clickable :to="{ name: 'corte' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="content_cut" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Corte</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </Can>
 
-          <Can I="read" a="'Presentacion'">
-            <q-item clickable :to="{ name: 'presentacion' }" exact v-ripple exact-active-class="drawer-active">
-              <q-item-section avatar>
-                <q-icon name="assignment_turned_in" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>Presentación</q-item-label>
-              </q-item-section>
-            </q-item>
-          </Can>
+              <q-item clickable :to="{ name: 'lavanderia' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                <q-item-section avatar>
+                  <q-icon name="local_laundry_service" size="sm" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Lavandería</q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <Can I="read" a="'Presentacion'">
+                <q-item clickable :to="{ name: 'presentacion' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="assignment_turned_in" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Presentación</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </Can>
+            </q-list>
+          </q-expansion-item>
         </q-list>
       </q-scroll-area>
     </q-drawer>

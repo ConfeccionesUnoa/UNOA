@@ -1,19 +1,19 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md q-gutter-sm">
     <div class="row items-center q-mb-md">
       <div class="col">
-        <h5>Presentaciones</h5>
+        <h5>Lavandería</h5>
       </div>
       <div class="col-auto">
-        <q-btn color="primary" label="Nueva presentación" icon="add" @click="openDialog()" />
+        <q-btn color="primary" label="Nueva solicitud" icon="add" @click="openDialog()" />
       </div>
     </div>
 
     <div class="row q-mb-md">
-      <q-input v-model="filter" label="Buscar por referencia" dense outlined />
+      <q-input v-model="filter" label="Buscar por referencia" dense />
     </div>
 
-    <q-table :rows="presentaciones" :columns="columns" row-key="uuid" flat bordered :filter="filter">
+    <q-table :rows="lavanderias" :columns="columns" row-key="uuid" flat bordered :filter="filter">
       <template v-slot:body-cell-acciones="props">
         <q-td align="right">
           <q-btn dense flat color="primary" icon="receipt" @click.stop="emitirRemision(props.row)" v-ripple title="Emitir remisión" />
@@ -26,17 +26,27 @@
     <q-dialog v-model="dialog" persistent>
       <q-card style="min-width: 500px; max-width: 95vw;">
         <q-card-section>
-          <div class="text-h6">{{ editing ? 'Editar' : 'Agregar' }} presentación</div>
+          <div class="text-h6">{{ editing ? 'Editar' : 'Agregar' }} solicitud lavandería</div>
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit.prevent="savePresentacion">
-            <!-- Referencia -->
+          <q-form @submit.prevent="saveLavanderia">
             <div class="row q-col-gutter-md">
               <div class="col-xs-12 col-sm-6">
                 <q-select
                   filled
-                  label="Referencia"
+                  label="Tipo"
+                  v-model="form.tipo"
+                  :options="[{ label: 'Salida', value: 'SALIDA' }, { label: 'Recepción', value: 'RECEPCION' }]"
+                  emit-value
+                  map-options
+                  dense
+                />
+              </div>
+              <div class="col-xs-12 col-sm-6">
+                <q-select
+                  filled
+                  label="Referencia" 
                   v-model="form.referencia"
                   :options="programaciones.map(p => ({ label: p.numero_orden, value: p.uuid }))"
                   emit-value
@@ -45,28 +55,19 @@
                 />
               </div>
               <div class="col-xs-12 col-sm-6">
-                <q-input filled label="Número de orden" v-model="form.numero_orden" dense :readonly="true" />
-              </div>
-            </div>
-
-            <!-- Cortes asociados -->
-            <div class="row q-col-gutter-md q-mt-sm">
-              <div class="col-12">
                 <q-select
                   filled
-                  label="Cortes asociados"
-                  v-model="form.cortes_input"
-                  :options="cortesFiltrados"
-                  option-label="label"
+                  label="Corte" 
+                  v-model="form.corte_uuid"
+                  :options="(form.referencia ? cortes.filter(c => c.orden_produccion === programaciones.find(p => p.uuid === form.referencia)?.numero_orden) : []).map(c => ({ label: c.lote || c.orden_produccion || c.uuid, value: c.uuid }))"
                   option-value="value"
-                  multiple
-                  emit-value
+                  option-label="label"
+                  :disable="!form.referencia"
                   dense
                 />
               </div>
             </div>
 
-            <!-- Fecha y Número de remisión -->
             <div class="row q-col-gutter-md q-mt-sm">
               <div class="col-xs-12 col-sm-6">
                 <q-input filled label="Fecha" type="date" v-model="form.fecha" dense />
@@ -76,27 +77,30 @@
               </div>
             </div>
 
-            <!-- Estado y Fecha de finalización -->
             <div class="row q-col-gutter-md q-mt-sm">
               <div class="col-xs-12 col-sm-6">
-                <q-select
-                  filled
-                  label="Estado"
-                  v-model="form.estado_proceso"
-                  :options="estadoOptions"
-                  emit-value
-                  map-options
-                  dense
-                />
+                <q-input filled label="Lavandería" v-model="form.lavanderia" dense />
               </div>
               <div class="col-xs-12 col-sm-6">
-                <q-input filled label="Fecha de finalización" type="date" v-model="form.fecha_finalizacion" dense />
+                <q-input filled label="Cantidad" type="number" v-model.number="form.cantidad" dense />
               </div>
             </div>
 
-            <q-card-actions align="right" class="q-mt-md">
+            <q-separator class="q-mt-md q-mb-md" />
+            <div v-if="form.tipo === 'RECEPCION'">
+              <div class="row q-col-gutter-md q-mt-sm">
+                <div class="col-xs-12 col-sm-6">
+                  <q-input filled label="Cantidad conformes" type="number" v-model.number="form.cantidad_conformes" dense />
+                </div>
+                <div class="col-xs-12 col-sm-6">
+                  <q-input filled label="Cantidad no conformes" type="number" v-model.number="form.cantidad_no_conformes" dense />
+                </div>
+              </div>
+            </div>
+
+            <q-card-actions align="right">
               <q-btn flat label="Cancelar" color="negative" @click="dialog = false" />
-              <q-btn flat label="Guardar" color="primary" @click="savePresentacion" />
+              <q-btn flat label="Guardar" color="primary" @click="saveLavanderia" />
             </q-card-actions>
           </q-form>
         </q-card-section>
@@ -106,13 +110,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
-const presentaciones = ref([])
+const lavanderias = ref([])
 const programaciones = ref([])
 const cortes = ref([])
 const dialog = ref(false)
@@ -121,65 +125,40 @@ const editingUuid = ref(null)
 const filter = ref('')
 
 const form = ref({
+  tipo: 'SALIDA',
   referencia: '',
-  numero_orden: '',
   fecha: new Date().toISOString().split('T')[0],
   numero_remision: '',
-  estado_proceso: 'PEN',
-  fecha_finalizacion: '',
-  cortes_input: []
-})
-
-const estadoOptions = [
-  { label: 'Pendiente', value: 'PEN' },
-  { label: 'En proceso', value: 'PRO' },
-  { label: 'Finalizado', value: 'FIN' }
-]
-
-const columns = [
-  { name: 'fecha', label: 'Fecha', field: 'fecha' },
-  { name: 'numero_orden', label: 'Número de orden', field: 'numero_orden' },
-  { name: 'referencia', label: 'Referencia', field: 'referencia' },
-  { name: 'numero_remision', label: 'Remisión', field: 'numero_remision' },
-  { name: 'estado_proceso', label: 'Estado', field: 'estado_proceso' },
-  { name: 'acciones', label: 'Acciones', field: 'uuid' }
-]
-
-const cortesFiltrados = computed(() => {
-  if (!form.value.referencia) return []
-  const selectedProg = programaciones.value.find(p => p.uuid === form.value.referencia)
-  if (!selectedProg) return []
-  return cortes.value
-    .filter(c => c.orden_produccion === selectedProg.numero_orden)
-    .map(c => ({ label: c.lote || c.orden_produccion || c.uuid, value: c.uuid }))
+  lavanderia: '',
+  cantidad: 0,
+  corte_uuid: null,
+  cantidad_conformes: 0,
+  cantidad_no_conformes: 0,
 })
 
 watch(() => form.value.referencia, (newVal) => {
-  if (newVal) {
-    form.value.cortes_input = []
-    const nextNumber = (presentaciones.value.filter(p => {
-      const prog = programaciones.value.find(pr => pr.uuid === newVal)
-      return p.referencia === prog?.numero_orden
-    }).length + 1)
-    form.value.numero_orden = `ORD-${String(nextNumber).padStart(4, '0')}`
-    form.value.numero_remision = generarNumeroRemision()
+  if (newVal !== form.value.referencia) {
+    form.value.corte_uuid = null
   }
 })
+
+const columns = [
+  { name: 'tipo', label: 'Tipo', field: 'tipo' },
+  { name: 'referencia', label: 'Referencia', field: 'referencia' },
+  { name: 'fecha', label: 'Fecha', field: 'fecha' },
+  { name: 'numero_remision', label: 'Remisión', field: 'numero_remision' },
+  { name: 'lavanderia', label: 'Lavandería', field: 'lavanderia' },
+  { name: 'cantidad', label: 'Cantidad', field: 'cantidad' },
+  { name: 'cantidad_conformes', label: 'Conformes', field: 'cantidad_conformes' },
+  { name: 'cantidad_no_conformes', label: 'No conformes', field: 'cantidad_no_conformes' },
+  { name: 'acciones', label: 'Acciones', field: 'uuid' }
+]
 
 onMounted(() => {
   loadProgramaciones()
   loadCortes()
-  loadPresentaciones()
+  loadLavanderias()
 })
-
-async function loadProgramaciones() {
-  try {
-    const r = await api.get('core/programacion/')
-    programaciones.value = r.data
-  } catch (err) {
-    console.error(err)
-  }
-}
 
 async function loadCortes() {
   try {
@@ -190,75 +169,87 @@ async function loadCortes() {
   }
 }
 
-async function loadPresentaciones() {
+
+async function loadProgramaciones() {
   try {
-    const r = await api.get('core/presentacion/')
-    presentaciones.value = r.data
+    const r = await api.get('core/programacion/')
+    programaciones.value = r.data
   } catch (err) {
     console.error(err)
   }
 }
 
-function generarNumeroRemision() {
-  const existing = presentaciones.value
-  const next = existing.length + 1
-  return `REM-${String(next).padStart(4, '0')}`
+async function loadLavanderias() {
+  try {
+    const r = await api.get('core/lavanderia/')
+    lavanderias.value = r.data
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 function openDialog(row = null) {
   if (row) {
     editing.value = true
     editingUuid.value = row.uuid
-    const selectedProg = programaciones.value.find(p => p.uuid === row.programacion?.uuid || row.programacion)
     Object.assign(form.value, {
-      referencia: selectedProg?.uuid || '',
-      numero_orden: row.numero_orden,
+      tipo: row.tipo,
+      referencia: row.programacion ? row.programacion.uuid : '',
       fecha: row.fecha,
       numero_remision: row.numero_remision,
-      estado_proceso: row.estado_proceso,
-      fecha_finalizacion: row.fecha_finalizacion,
-      cortes_input: (row.cortes || []).map(c => c.uuid)
+      lavanderia: row.lavanderia,
+      cantidad: row.cantidad,
+      corte_uuid: row.corte ? row.corte.uuid : null,
+      cantidad_conformes: row.cantidad_conformes,
+      cantidad_no_conformes: row.cantidad_no_conformes,
     })
   } else {
     editing.value = false
     editingUuid.value = null
-    Object.assign(form.value, {
+    form.value = {
+      tipo: 'SALIDA',
       referencia: '',
-      numero_orden: '',
       fecha: new Date().toISOString().split('T')[0],
-      numero_remision: '',
-      estado_proceso: 'PEN',
-      fecha_finalizacion: '',
-      cortes_input: []
-    })
+      numero_remision: generarNumeroRemision(),
+      lavanderia: '',
+      cantidad: 0,
+      corte_uuid: null,
+      cantidad_conformes: 0,
+      cantidad_no_conformes: 0,
+    }
   }
   dialog.value = true
 }
 
-async function savePresentacion() {
+function generarNumeroRemision() {
+  const existing = lavanderias.value.filter(l => l.tipo === 'SALIDA' || l.tipo === 'RECEPCION')
+  const next = existing.length + 1
+  return `REM-${String(next).padStart(4, '0')}`
+}
+
+async function saveLavanderia() {
   try {
-    const selectedProg = programaciones.value.find(p => p.uuid === form.value.referencia)
+    const selectedProgramacion = programaciones.value.find(p => p.uuid === form.value.referencia)
     const payload = {
+      ...form.value,
       programacion_uuid: form.value.referencia,
-      numero_orden: form.value.numero_orden,
-      referencia: selectedProg?.numero_orden || '',
-      fecha: form.value.fecha,
-      numero_remision: form.value.numero_remision,
-      estado_proceso: form.value.estado_proceso,
-      fecha_finalizacion: form.value.fecha_finalizacion,
-      cortes_input: form.value.cortes_input
+      referencia: selectedProgramacion?.numero_orden || '',
+      corte_uuid: form.value.corte_uuid || null,
+      cantidad: Number(form.value.cantidad) || 0,
+      cantidad_conformes: Number(form.value.cantidad_conformes) || 0,
+      cantidad_no_conformes: Number(form.value.cantidad_no_conformes) || 0,
     }
 
     if (editing.value && editingUuid.value) {
-      await api.put(`core/presentacion/${editingUuid.value}/`, payload)
-      Swal.fire('Éxito', 'Presentación actualizada', 'success')
+      await api.put(`core/lavanderia/${editingUuid.value}/`, payload)
+      Swal.fire('Éxito', 'Solicitud actualizada', 'success')
     } else {
-      await api.post('core/presentacion/', payload)
-      Swal.fire('Éxito', 'Presentación registrada', 'success')
+      await api.post('core/lavanderia/', payload)
+      Swal.fire('Éxito', 'Solicitud registrada', 'success')
     }
 
     dialog.value = false
-    await loadPresentaciones()
+    loadLavanderias()
   } catch (err) {
     console.error(err)
     Swal.fire('Error', err?.response?.data?.detail || 'No se pudo guardar', 'error')
@@ -267,9 +258,9 @@ async function savePresentacion() {
 
 async function deleteRegistro(uuid) {
   try {
-    await api.delete(`core/presentacion/${uuid}/`)
-    Swal.fire('Eliminado', 'Presentación eliminada', 'success')
-    await loadPresentaciones()
+    await api.delete(`core/lavanderia/${uuid}/`)
+    Swal.fire('Eliminado', 'Registro eliminado', 'success')
+    loadLavanderias()
   } catch (err) {
     console.error(err)
     Swal.fire('Error', 'No se pudo eliminar', 'error')
@@ -279,23 +270,24 @@ async function deleteRegistro(uuid) {
 async function emitirRemision(row) {
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-      <h1 style="text-align: center; color: #333;">Remisión de Presentación</h1>
+      <h1 style="text-align: center; color: #333;">Remisión de Lavandería</h1>
       <div style="border: 1px solid #ccc; padding: 15px; margin: 20px 0;">
         <h2>Información General</h2>
         <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Tipo:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.tipo}</td></tr>
           <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Referencia:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.referencia}</td></tr>
-          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Número de Orden:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.numero_orden}</td></tr>
           <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Fecha:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.fecha}</td></tr>
           <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Número de Remisión:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.numero_remision}</td></tr>
-          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Estado:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${getEstadoLabel(row.estado_proceso)}</td></tr>
-          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Cortes Asociados:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.cortes?.length || 0}</td></tr>
+          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Lavandería:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.lavanderia}</td></tr>
+          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Cantidad:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.cantidad}</td></tr>
         </table>
       </div>
-      ${row.fecha_finalizacion ? `
+      ${row.tipo === 'RECEPCION' ? `
       <div style="border: 1px solid #ccc; padding: 15px; margin: 20px 0;">
-        <h2>Finalización</h2>
+        <h2>Recepción</h2>
         <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Fecha de Finalización:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.fecha_finalizacion}</td></tr>
+          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Cantidad Conforme:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.cantidad_conformes}</td></tr>
+          <tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Cantidad No Conforme:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">${row.cantidad_no_conformes}</td></tr>
         </table>
       </div>
       ` : ''}
@@ -331,17 +323,12 @@ async function emitirRemision(row) {
       heightLeft -= pageHeight
     }
 
-    pdf.save(`presentacion_${row.numero_remision}.pdf`)
+    pdf.save(`remision_${row.numero_remision}.pdf`)
   } catch (error) {
     console.error('Error generando PDF:', error)
     Swal.fire('Error', 'No se pudo generar el PDF', 'error')
   } finally {
     document.body.removeChild(element)
   }
-}
-
-function getEstadoLabel(estado) {
-  const opt = estadoOptions.find(o => o.value === estado)
-  return opt?.label || estado
 }
 </script>

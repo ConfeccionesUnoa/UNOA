@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from config.pagination import Paginacion
-from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte
+from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte, Presentacion, Cliente, Lavanderia
 from .serializers import (
     InventarioListRetrieveSerializer,
     InventarioCreateUpdateSerializer,
@@ -16,9 +16,12 @@ from .serializers import (
     IngresoInventarioCreateSerializer,
     ProveedorSerializer,
     CategoriaSerializer,
+    ClienteSerializer,
     CorteSerializer,
     ProgramacionSerializer,
     ProgramacionInsumoSerializer,
+    PresentacionSerializer,
+    LavanderiaSerializer,
 )
 from .models import Presentacion
 from .serializers import PresentacionSerializer
@@ -153,6 +156,19 @@ class CategoriaRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
 
 
+class ClienteListCreateAPIView(ListCreateAPIView):
+    queryset = Cliente.objects.all()
+    serializer_class = ClienteSerializer
+    permission_classes = (IsAuthenticated,)
+
+
+class ClienteRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Cliente.objects.all()
+    serializer_class = ClienteSerializer
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated,)
+
+
 class ProgramacionListCreateAPIView(ListCreateAPIView):
     """Listar y crear programaciones (órdenes)"""
     queryset = Programacion.objects.all()
@@ -254,5 +270,24 @@ class PresentacionListCreateAPIView(ListCreateAPIView):
 class PresentacionRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Presentacion.objects.all()
     serializer_class = PresentacionSerializer
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated,)
+
+
+class LavanderiaListCreateAPIView(ListCreateAPIView):
+    queryset = None
+    serializer_class = None
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return Lavanderia.objects.all()
+
+    def get_serializer_class(self):
+        return LavanderiaSerializer
+
+
+class LavanderiaRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Lavanderia.objects.all()
+    serializer_class = LavanderiaSerializer
     lookup_field = 'uuid'
     permission_classes = (IsAuthenticated,)

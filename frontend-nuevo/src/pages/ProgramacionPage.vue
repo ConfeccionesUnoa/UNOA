@@ -10,15 +10,28 @@
               <q-btn unelevated rounded icon="add" color="primary" @click="creating" label="Agregar" />
             </Can>
             <q-space />
+            <q-btn-toggle
+              v-model="mostrarFinalizadas"
+              :options="[
+                { label: 'Activas', value: false },
+                { label: 'Finalizadas', value: true }
+              ]"
+              color="primary"
+              toggle-color="secondary"
+              unelevated
+            />
           </div>
 
           <div class="row q-col-gutter-md">
-            <div class="col-xs-12 col-sm-6 col-md-4" v-for="item in programaciones" :key="item.uuid">
+            <div class="col-xs-12 col-sm-6 col-md-4" v-for="item in mostrarFinalizadas ? programacionesFinalizadas : programacionesActivas" :key="item.uuid">
               <q-card class="my-card">
                 <q-card-section class="row items-center">
                   <div>
-                    <div class="text-subtitle2 text-weight-medium">{{ item.numero_orden }}</div>
+                    <div class="text-h5 text-weight-bold text-primary">{{ item.numero_orden }}</div>
                     <div class="text-caption">{{ item.codigo }}</div>
+                    <div class="text-caption">Prioridad: 
+                      <q-input dense v-model.number="item.prioridad" type="number" min="1" @blur="updatePrioridad(item)" style="width: 60px; display: inline-block;" />
+                    </div>
                   </div>
                   <q-space />
                   <q-btn color="secondary" size="sm" label="Insumos" @click="openInsumos(item)" />
@@ -27,6 +40,9 @@
                 <q-card-section>
                   <div class="text-caption">{{ item.descripcion }}</div>
                   <div class="text-caption q-mt-sm">Proveedor: {{ item.proveedor ? item.proveedor.nombre : '-' }}</div>
+                  <div class="text-caption q-mt-sm">Cliente: {{ item.cliente ? item.cliente.nombre : '-' }}</div>
+                  <div class="text-caption q-mt-sm" v-if="item.tallas">Total unidades: {{ getTallasTotal(item.tallas) }}</div>
+                  <div class="text-caption q-mt-sm" v-if="item.fecha_entrega">Fecha entrega: {{ formatDate(item.fecha_entrega) }} ({{ getDiasRestantes(item.fecha_entrega) }} días)</div>
                 </q-card-section>
               </q-card>
             </div>
@@ -63,22 +79,73 @@
             <q-form ref="form_ref" @submit.prevent="onSubmit" class="q-gutter-md">
               <div class="row q-col-gutter-md">
                 <div class="col-xs-12 col-sm-6">
-                  <q-input filled v-model="numero_orden" label="Número de orden *" lazy-rules dense :rules="[val => !!val || 'El campo es obligatorio']" />
+                  <q-input filled v-model="numero_orden" label="Referencia *" lazy-rules dense :rules="[val => !!val || 'El campo es obligatorio']" />
                 </div>
                 <div class="col-xs-12 col-sm-6">
-                  <q-input filled v-model="codigo" label="Código *" lazy-rules dense :rules="[val => !!val || 'El campo es obligatorio']" />
-                </div>
-              </div>
-
-              <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-12">
-                  <q-input filled v-model="descripcion" label="Descripción" type="textarea" rows="2" dense />
+                  <q-input filled v-model="codigo" label="Orden de compra *" lazy-rules dense :rules="[val => !!val || 'El campo es obligatorio']" />
                 </div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
                 <div class="col-xs-12">
                   <q-select filled v-model="proveedor" :options="proveedores" option-value="uuid" option-label="nombre" label="Proveedor" emit-value map-options dense />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mt-sm">
+                <div class="col-xs-12">
+                  <q-select filled v-model="cliente" :options="clientes" option-value="uuid" option-label="nombre" label="Cliente" emit-value map-options dense />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mt-sm">
+                <div class="col-xs-12">
+                  <q-input filled v-model="fecha_entrega" label="Fecha de entrega" type="date" dense />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mt-sm">
+                <div class="col-xs-12">
+                  <div class="text-subtitle2">Total unidades programadas - Tallas</div>
+                  <div class="text-caption q-mb-sm">Tallas en letras (S, M, L, XL, XXL)</div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.s" label="S" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.m" label="M" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.l" label="L" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.xl" label="XL" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.xxl" label="XXL" type="number" @update:model-value="calculateTallaTotal" /></div>
+                  </div>
+                  <div class="text-caption q-mt-md q-mb-sm">Tallas numéricas (4 - 46)</div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t4" label="4" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t6" label="6" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t8" label="8" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t10" label="10" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t12" label="12" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t14" label="14" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t16" label="16" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t18" label="18" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t20" label="20" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t22" label="22" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t26" label="26" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t28" label="28" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t30" label="30" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t32" label="32" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t34" label="34" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t36" label="36" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t38" label="38" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t40" label="40" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t42" label="42" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t44" label="44" type="number" @update:model-value="calculateTallaTotal" /></div>
+                    <div class="col-xs-1"><q-input dense v-model.number="tallas.t46" label="46" type="number" @update:model-value="calculateTallaTotal" /></div>
+                  </div>
+                  <div class="text-caption q-mt-sm">Total unidades: {{ tallas.total }}</div>
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mt-sm">
+                <div class="col-xs-12">
+                  <q-input filled v-model="descripcion" label="Observaciones" type="textarea" rows="3" dense />
                 </div>
               </div>
             </q-form>
@@ -143,10 +210,14 @@
             <div class="q-mb-md">
               <div class="text-subtitle2">Información general</div>
               <div class="q-mt-sm">
-                <div><strong>Orden:</strong> {{ selectedSolicitud.numero_orden }}</div>
-                <div><strong>Código:</strong> {{ selectedSolicitud.codigo }}</div>
-                <div><strong>Descripción:</strong> {{ selectedSolicitud.descripcion }}</div>
+                <div><strong>Referencia:</strong> {{ selectedSolicitud.numero_orden }}</div>
+                <div><strong>Orden de compra:</strong> {{ selectedSolicitud.codigo }}</div>
+                <div><strong>Observaciones:</strong> {{ selectedSolicitud.descripcion }}</div>
                 <div><strong>Proveedor:</strong> {{ selectedSolicitud.proveedor ? selectedSolicitud.proveedor.nombre : '-' }}</div>
+                <div><strong>Cliente:</strong> {{ selectedSolicitud.cliente ? selectedSolicitud.cliente.nombre : '-' }}</div>
+                <div v-if="selectedSolicitud.fecha_entrega"><strong>Fecha entrega:</strong> {{ formatDate(selectedSolicitud.fecha_entrega) }} ({{ getDiasRestantes(selectedSolicitud.fecha_entrega) }} días)</div>
+                <div v-if="selectedSolicitud.tallas"><strong>Total unidades:</strong> {{ getTallasTotal(selectedSolicitud.tallas) }}</div>
+                <div><strong>Prioridad:</strong> {{ selectedSolicitud.prioridad }}</div>
               </div>
             </div>
 
@@ -189,7 +260,16 @@ const numero_orden = ref(null)
 const codigo = ref(null)
 const descripcion = ref(null)
 const proveedor = ref(null)
+const cliente = ref(null)
+const fecha_entrega = ref(null)
 const proveedores = ref([])
+const clientes = ref([])
+const presentaciones = ref([])
+const tallas = ref({
+  s: 0, m: 0, l: 0, xl: 0, xxl: 0,
+  t4: 0, t6: 0, t8: 0, t10: 0, t12: 0, t14: 0, t16: 0, t18: 0, t20: 0, t22: 0, t26: 0, t28: 0, t30: 0, t32: 0, t34: 0, t36: 0, t38: 0, t40: 0, t42: 0, t44: 0, t46: 0,
+  total: 0
+})
 const programaciones = ref([])
 const inventario = ref([])
 const selected = ref([]) // array of selected rows from inventory
@@ -201,6 +281,7 @@ const form_ref = ref(null)
 const auth = useAuthStore()
 const detailDialog = ref(false)
 const selectedSolicitud = ref(null)
+const mostrarFinalizadas = ref(false)
 
 const histColumns = [
   { name: 'programacion', label: 'Orden', field: row => (row.numero_orden ? row.numero_orden : ''), align: 'left' },
@@ -225,7 +306,27 @@ const insumosDetailColumns = [
 onMounted(() => {
   loadProgramaciones()
   loadProveedores()
+  loadClientes()
   loadHistorial()
+  loadPresentaciones()
+})
+
+const programacionesActivas = computed(() => {
+  return programaciones.value.filter(prog => {
+    const tienePresentacionFinalizada = presentaciones.value.some(
+      pres => pres.referencia === prog.numero_orden && pres.estado_proceso === 'FIN'
+    )
+    return !tienePresentacionFinalizada
+  })
+})
+
+const programacionesFinalizadas = computed(() => {
+  return programaciones.value.filter(prog => {
+    const tienePresentacionFinalizada = presentaciones.value.some(
+      pres => pres.referencia === prog.numero_orden && pres.estado_proceso === 'FIN'
+    )
+    return tienePresentacionFinalizada
+  })
 })
 
 async function loadProgramaciones() {
@@ -241,6 +342,15 @@ async function loadProveedores() {
   try {
     const r = await api.get('core/proveedor/')
     proveedores.value = r.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function loadClientes() {
+  try {
+    const r = await api.get('core/cliente/')
+    clientes.value = r.data
   } catch (err) {
     console.error(err)
   }
@@ -265,11 +375,62 @@ async function loadHistorial() {
   }
 }
 
+async function loadPresentaciones() {
+  try {
+    const r = await api.get('core/presentacion/')
+    presentaciones.value = r.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+function calculateTallaTotal() {
+  tallas.value.total = (tallas.value.s || 0) + (tallas.value.m || 0) + (tallas.value.l || 0) + (tallas.value.xl || 0) + (tallas.value.xxl || 0) +
+    (tallas.value.t4 || 0) + (tallas.value.t6 || 0) + (tallas.value.t8 || 0) + (tallas.value.t10 || 0) + (tallas.value.t12 || 0) +
+    (tallas.value.t14 || 0) + (tallas.value.t16 || 0) + (tallas.value.t18 || 0) + (tallas.value.t20 || 0) + (tallas.value.t22 || 0) +
+    (tallas.value.t26 || 0) + (tallas.value.t28 || 0) + (tallas.value.t30 || 0) + (tallas.value.t32 || 0) + (tallas.value.t34 || 0) +
+    (tallas.value.t36 || 0) + (tallas.value.t38 || 0) + (tallas.value.t40 || 0) + (tallas.value.t42 || 0) + (tallas.value.t44 || 0) +
+    (tallas.value.t46 || 0)
+}
+
+async function updatePrioridad(item) {
+  try {
+    await api.patch(`core/programacion/${item.uuid}/`, { prioridad: item.prioridad })
+    await loadProgramaciones()
+  } catch (err) {
+    console.error(err)
+    Swal.fire({ title: 'Error', text: 'No se pudo actualizar prioridad', icon: 'error' })
+  }
+}
+
+async function getNextPrioridad() {
+  try {
+    const r = await api.get('core/programacion/')
+    const prioridades = r.data.map(p => p.prioridad).filter(p => p > 0).sort((a, b) => a - b)
+    let next = 1
+    for (const p of prioridades) {
+      if (p === next) next++
+      else break
+    }
+    return next
+  } catch (err) {
+    console.error(err)
+    return 1
+  }
+}
+
 function creating() {
   numero_orden.value = null
   codigo.value = null
   descripcion.value = null
   proveedor.value = null
+  cliente.value = null
+  fecha_entrega.value = null
+  tallas.value = {
+    s: 0, m: 0, l: 0, xl: 0, xxl: 0,
+    t4: 0, t6: 0, t8: 0, t10: 0, t12: 0, t14: 0, t16: 0, t18: 0, t20: 0, t22: 0, t26: 0, t28: 0, t30: 0, t32: 0, t34: 0, t36: 0, t38: 0, t40: 0, t42: 0, t44: 0, t46: 0,
+    total: 0
+  }
   toolbar.value = true
 }
 
@@ -277,11 +438,16 @@ async function onSubmit() {
   const valid = await (form_ref.value ? form_ref.value.validate() : true)
   if (!valid) return
   try {
+    const nextPrioridad = await getNextPrioridad()
     await api.post('core/programacion/', {
       numero_orden: numero_orden.value,
       codigo: codigo.value,
       descripcion: descripcion.value,
-      proveedor: proveedor.value
+      proveedor: proveedor.value,
+      cliente: cliente.value,
+      fecha_entrega: fecha_entrega.value,
+      tallas: JSON.stringify(tallas.value),
+      prioridad: nextPrioridad
     })
     toolbar.value = false
     await loadProgramaciones()
@@ -334,6 +500,30 @@ async function onSubmitInsumos() {
     console.error(err)
     Swal.fire({ title: 'Error', text: err?.response?.data?.detail || 'No se pudo solicitar insumos', icon: 'error' })
   }
+}
+
+function getTallasTotal(tallasJson) {
+  try {
+    const tallas = JSON.parse(tallasJson)
+    return tallas.total || 0
+  } catch (e) {
+    return 0
+  }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('es-ES')
+}
+
+function getDiasRestantes(fechaEntrega) {
+  if (!fechaEntrega) return ''
+  const hoy = new Date()
+  const entrega = new Date(fechaEntrega)
+  const diffTime = entrega - hoy
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays
 }
 
 </script>

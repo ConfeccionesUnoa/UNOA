@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte, CorteDetalle, Presentacion
+from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte, CorteDetalle, Presentacion, Cliente, Lavanderia
 
 
 class ProveedorSerializer(serializers.ModelSerializer):
@@ -12,6 +12,13 @@ class ProveedorSerializer(serializers.ModelSerializer):
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
+        fields = ['uuid', 'nombre']
+        read_only_fields = ['uuid']
+
+
+class ClienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cliente
         fields = ['uuid', 'nombre']
         read_only_fields = ['uuid']
 
@@ -30,9 +37,10 @@ class CorteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Corte
         fields = [
-            'uuid', 'tercero', 'fecha', 'ref', 'tela', 'mtrs_enviados', 'lote', 'orden_produccion', 'notas', 'tallas',
+            'uuid', 'tercero', 'fecha', 'tela', 'mtrs_enviados', 'lote', 'orden_produccion', 'notas', 'tallas',
             'total_unidades', 'total_metros_consumidos', 'mtrs_retazos', 'promedio', 'muestras', 'faltante_tela',
             'consumo_cantidad', 'consumo_metros_gastados', 'consumo_ancho', 'consumo_largo', 'consumo_promedio', 'sobrante_tela', 'firma_responsable',
+            'estado', 'fecha_estado',
             'detalles', 'detalles_input', 'created'
         ]
         read_only_fields = ['uuid', 'created', 'detalles']
@@ -110,12 +118,29 @@ class ProgramacionInsumoSerializer(serializers.ModelSerializer):
 class ProgramacionSerializer(serializers.ModelSerializer):
     proveedor = ProveedorSerializer(read_only=True)
     proveedor_uuid = serializers.SlugRelatedField(queryset=Proveedor.objects.all(), slug_field='uuid', write_only=True, source='proveedor', allow_null=True, required=False)
+    cliente = ClienteSerializer(read_only=True)
+    cliente_uuid = serializers.SlugRelatedField(queryset=Cliente.objects.all(), slug_field='uuid', write_only=True, source='cliente', allow_null=True, required=False)
     insumos = ProgramacionInsumoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Programacion
-        fields = ['uuid', 'numero_orden', 'codigo', 'descripcion', 'proveedor', 'proveedor_uuid', 'insumos', 'created']
+        fields = ['uuid', 'numero_orden', 'codigo', 'descripcion', 'proveedor', 'proveedor_uuid', 'cliente', 'cliente_uuid', 'fecha_entrega', 'tallas', 'prioridad', 'insumos', 'created']
         read_only_fields = ['uuid', 'created', 'insumos']
+
+
+class LavanderiaSerializer(serializers.ModelSerializer):
+    programacion = ProgramacionSerializer(read_only=True)
+    programacion_uuid = serializers.SlugRelatedField(queryset=Programacion.objects.all(), slug_field='uuid', source='programacion', write_only=True, allow_null=True, required=False)
+    corte = CorteSerializer(read_only=True)
+    corte_uuid = serializers.SlugRelatedField(queryset=Corte.objects.all(), slug_field='uuid', source='corte', write_only=True, allow_null=True, required=False)
+
+    class Meta:
+        model = Lavanderia
+        fields = [
+            'uuid', 'programacion', 'programacion_uuid', 'corte', 'corte_uuid', 'referencia', 'fecha', 'numero_remision', 'lavanderia',
+            'cantidad', 'tipo', 'cantidad_conformes', 'cantidad_no_conformes', 'created'
+        ]
+        read_only_fields = ['uuid', 'created']
 
 
 class PresentacionSerializer(serializers.ModelSerializer):
