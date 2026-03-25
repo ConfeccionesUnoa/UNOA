@@ -34,13 +34,21 @@
                     </div>
                   </div>
                   <q-space />
-                  <q-btn color="secondary" size="sm" label="Insumos" @click="openInsumos(item)" />
+                  <div class="q-gutter-xs">
+                    <Can I="update" an="Programacion">
+                      <q-btn color="orange" size="sm" icon="edit" @click="editar(item)" />
+                    </Can>
+                    <Can I="delete" an="Programacion">
+                      <q-btn color="negative" size="sm" icon="delete" @click="eliminar(item)" />
+                    </Can>
+                    <q-btn color="secondary" size="sm" label="Insumos" @click="openInsumos(item)" />
+                  </div>
                 </q-card-section>
                 <q-separator />
                 <q-card-section>
                   <div class="text-caption">{{ item.descripcion }}</div>
-                  <div class="text-caption q-mt-sm">Proveedor: {{ item.proveedor ? item.proveedor.nombre : '-' }}</div>
-                  <div class="text-caption q-mt-sm">Cliente: {{ item.cliente ? item.cliente.nombre : '-' }}</div>
+                  <div class="text-caption q-mt-sm">Proveedor: {{ getProveedorNombre(item.proveedor) }}</div>
+                  <div class="text-caption q-mt-sm">Cliente: {{ getClienteNombre(item.cliente) }}</div>
                   <div class="text-caption q-mt-sm" v-if="item.tallas">Total unidades: {{ getTallasTotal(item.tallas) }}</div>
                   <div class="text-caption q-mt-sm" v-if="item.fecha_entrega">Fecha entrega: {{ formatDate(item.fecha_entrega) }} ({{ getDiasRestantes(item.fecha_entrega) }} días)</div>
                 </q-card-section>
@@ -48,9 +56,11 @@
             </div>
           </div>
 
-          <q-separator class="q-mt-md" />
+          <div class="row justify-center q-mt-md">
+            <q-btn outline color="primary" icon="history" @click="mostrarHistorial = !mostrarHistorial" :label="mostrarHistorial ? 'Ocultar Historial' : 'Ver Historial'" />
+          </div>
 
-          <div class="q-mt-md">
+          <div v-if="mostrarHistorial" class="q-mt-md">
             <div class="text-h6">Historial de solicitudes</div>
             <q-table :rows="programaciones" :columns="histColumns" row-key="uuid" flat dense>
               <template v-slot:body-cell-acciones="props">
@@ -66,11 +76,11 @@
 
       <!-- Dialog: Nueva Programación -->
       <q-dialog v-model="toolbar" persistent>
-        <q-card style="width: 700px; max-width: 95vw;">
+        <q-card style="width: 900px; max-width: 90vw; min-width: 720px;">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Nueva Programación</div>
+            <div class="text-h6">{{ editingItem ? 'Editar Programación' : 'Nueva Programación' }}</div>
             <q-space />
-            <q-btn icon="close" flat round dense v-close-popup @click="toolbar=false" />
+            <q-btn icon="close" flat round dense v-close-popup @click="closeDialog" />
           </q-card-section>
 
           <q-linear-progress :value="1" color="primary" />
@@ -154,7 +164,7 @@
           <q-separator />
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn label="Cancelar" v-close-popup color="negative" flat @click="toolbar=false" />
+            <q-btn label="Cancelar" color="negative" flat @click="closeDialog" />
             <q-btn label="Guardar" @click.prevent="onSubmit" color="primary" />
           </q-card-actions>
         </q-card>
@@ -282,6 +292,8 @@ const auth = useAuthStore()
 const detailDialog = ref(false)
 const selectedSolicitud = ref(null)
 const mostrarFinalizadas = ref(false)
+const mostrarHistorial = ref(false)
+const editingItem = ref(null)
 
 const histColumns = [
   { name: 'programacion', label: 'Orden', field: row => (row.numero_orden ? row.numero_orden : ''), align: 'left' },
@@ -419,43 +431,108 @@ async function getNextPrioridad() {
   }
 }
 
-function creating() {
-  numero_orden.value = null
-  codigo.value = null
-  descripcion.value = null
-  proveedor.value = null
-  cliente.value = null
-  fecha_entrega.value = null
-  tallas.value = {
-    s: 0, m: 0, l: 0, xl: 0, xxl: 0,
-    t4: 0, t6: 0, t8: 0, t10: 0, t12: 0, t14: 0, t16: 0, t18: 0, t20: 0, t22: 0, t26: 0, t28: 0, t30: 0, t32: 0, t34: 0, t36: 0, t38: 0, t40: 0, t42: 0, t44: 0, t46: 0,
-    total: 0
+function creating(item = null) {
+  editingItem.value = item
+  if (item) {
+    // Cargar datos para editar
+    numero_orden.value = item.numero_orden
+    codigo.value = item.codigo
+    descripcion.value = item.descripcion
+    proveedor.value = item.proveedor ? item.proveedor.uuid : null
+    cliente.value = item.cliente ? item.cliente.uuid : null
+    fecha_entrega.value = item.fecha_entrega
+    tallas.value = item.tallas ? JSON.parse(item.tallas) : {
+      s: 0, m: 0, l: 0, xl: 0, xxl: 0,
+      t4: 0, t6: 0, t8: 0, t10: 0, t12: 0, t14: 0, t16: 0, t18: 0, t20: 0, t22: 0, t26: 0, t28: 0, t30: 0, t32: 0, t34: 0, t36: 0, t38: 0, t40: 0, t42: 0, t44: 0, t46: 0,
+      total: 0
+    }
+  } else {
+    // Limpiar para crear nuevo
+    numero_orden.value = null
+    codigo.value = null
+    descripcion.value = null
+    proveedor.value = null
+    cliente.value = null
+    fecha_entrega.value = null
+    tallas.value = {
+      s: 0, m: 0, l: 0, xl: 0, xxl: 0,
+      t4: 0, t6: 0, t8: 0, t10: 0, t12: 0, t14: 0, t16: 0, t18: 0, t20: 0, t22: 0, t26: 0, t28: 0, t30: 0, t32: 0, t34: 0, t36: 0, t38: 0, t40: 0, t42: 0, t44: 0, t46: 0,
+      total: 0
+    }
   }
   toolbar.value = true
+}
+
+function editar(item) {
+  creating(item)
+}
+
+function closeDialog() {
+  toolbar.value = false
+  editingItem.value = null
+}
+
+async function eliminar(item) {
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    text: `¿Deseas eliminar la programación "${item.numero_orden}"?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  })
+
+  if (result.isConfirmed) {
+    try {
+      await api.delete(`core/programacion/${item.uuid}/`)
+      await loadProgramaciones()
+      await loadHistorial()
+      Swal.fire({ title: 'Eliminado', text: 'Programación eliminada correctamente', icon: 'success' })
+    } catch (err) {
+      console.error(err)
+      Swal.fire({ title: 'Error', text: 'No se pudo eliminar la programación', icon: 'error' })
+    }
+  }
 }
 
 async function onSubmit() {
   const valid = await (form_ref.value ? form_ref.value.validate() : true)
   if (!valid) return
+
   try {
-    const nextPrioridad = await getNextPrioridad()
-    await api.post('core/programacion/', {
+    const data = {
       numero_orden: numero_orden.value,
       codigo: codigo.value,
       descripcion: descripcion.value,
-      proveedor: proveedor.value,
-      cliente: cliente.value,
+      proveedor_uuid: proveedor.value || null,
+      cliente_uuid: cliente.value || null,
       fecha_entrega: fecha_entrega.value,
-      tallas: JSON.stringify(tallas.value),
-      prioridad: nextPrioridad
-    })
+      tallas: JSON.stringify(tallas.value)
+    }
+
+    if (editingItem.value) {
+      // Actualizar
+      data.prioridad = editingItem.value.prioridad // Mantener la prioridad existente
+      await api.patch(`core/programacion/${editingItem.value.uuid}/`, data)
+      Swal.fire({ title: 'Éxito', text: 'Programación actualizada', icon: 'success' })
+    } else {
+      // Crear nuevo
+      const nextPrioridad = await getNextPrioridad()
+      data.prioridad = nextPrioridad
+      await api.post('core/programacion/', data)
+      Swal.fire({ title: 'Éxito', text: 'Programación creada', icon: 'success' })
+    }
+
     toolbar.value = false
+    editingItem.value = null
     await loadProgramaciones()
     await loadHistorial()
-    Swal.fire({ title: 'Éxito', text: 'Programación creada', icon: 'success' })
   } catch (err) {
     console.error(err)
-    Swal.fire({ title: 'Error', text: err?.response?.data?.detail || 'No se pudo crear', icon: 'error' })
+    const action = editingItem.value ? 'actualizar' : 'crear'
+    Swal.fire({ title: 'Error', text: `No se pudo ${action} la programación`, icon: 'error' })
   }
 }
 
@@ -511,6 +588,21 @@ function getTallasTotal(tallasJson) {
   }
 }
 
+function getNombreEntidad(entity, list) {
+  if (!entity) return '-'
+  if (typeof entity === 'object') return entity.nombre || entity.uuid || '-'
+  const found = list.find(item => item.uuid === entity)
+  return found ? found.nombre : entity
+}
+
+function getProveedorNombre(entity) {
+  return getNombreEntidad(entity, proveedores.value)
+}
+
+function getClienteNombre(entity) {
+  return getNombreEntidad(entity, clientes.value)
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
@@ -529,5 +621,14 @@ function getDiasRestantes(fechaEntrega) {
 </script>
 
 <style scoped>
-.my-card { margin-bottom: 12px }
+.my-card {
+  margin-bottom: 12px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.my-card .q-card-section:last-child {
+  flex: 1;
+}
 </style>
