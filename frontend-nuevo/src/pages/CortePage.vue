@@ -190,14 +190,14 @@
               <div class="row q-col-gutter-md q-mt-sm">
                 <div class="col-xs-3"><q-input dense v-model.number="form.total_unidades" label="Total unidades cortadas" type="number" readonly class="bg-grey-2" /></div>
                 <div class="col-xs-3"><q-input dense v-model.number="form.total_metros_consumidos" label="Total metros consumidos" type="number" readonly class="bg-grey-2" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.mtrs_retazos" label="Mtrs de retazos" type="number" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.promedio" label="Promedio" type="number" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.mtrs_retazos" label="Mtrs de retazos" type="number" readonly class="bg-grey-2" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.promedio" label="Promedio" type="number" readonly class="bg-grey-2" /></div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
                 <div class="col-xs-3"><q-input dense v-model.number="form.muestras" label="Muestras" type="number" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.faltante_tela" label="Faltante de tela" type="number" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.sobrante_tela" label="Sobrante de tela" type="number" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.faltante_tela" label="Faltante de tela" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.sobrante_tela" label="Sobrante de tela" type="number" readonly class="bg-grey-2" /></div>
                 <div class="col-xs-3"><q-input dense v-model="form.firma_responsable" label="Firma responsable" type="text" /></div>
               </div>
 
@@ -205,15 +205,16 @@
 
               <div class="text-subtitle2">Consumo tela (de bolsillo / combinado)</div>
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_cantidad" label="Cantidad" type="number" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_metros_gastados" label="Metros gastados" type="number" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_cantidad" label="Cantidad" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_metros_gastados" label="Metros gastados" type="number" readonly class="bg-grey-2" /></div>
                 <div class="col-xs-3"><q-input dense v-model.number="form.consumo_ancho" label="Ancho" type="number" /></div>
                 <div class="col-xs-3"><q-input dense v-model.number="form.consumo_largo" label="Largo" type="number" /></div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_promedio" label="Promedio consumo" type="number" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.faltante_tela" label="Faltante de tela" type="number" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_promedio" label="Promedio consumo" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="consumoData.faltante_tela" label="Faltante de tela" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="consumoData.sobrante_tela" label="Sobrante de tela" type="number" readonly class="bg-grey-2" /></div>
               </div>
 
               <q-card-actions align="right">
@@ -229,7 +230,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
 import Swal from 'sweetalert2'
 
@@ -253,13 +254,17 @@ const form = ref({
   promedio: 0,
   muestras: 0,
   faltante_tela: 0,
+  sobrante_tela: 0,
   consumo_cantidad: 0,
   consumo_metros_gastados: 0,
   consumo_ancho: 0,
   consumo_largo: 0,
   consumo_promedio: 0,
-  sobrante_tela: 0,
   firma_responsable: ''
+})
+const consumoData = ref({
+  faltante_tela: 0,
+  sobrante_tela: 0
 })
 const detalles = ref(Array.from({ length: 10 }).map((_, i) => ({ numero: i+1, proporcion: '', unidades_cortadas: 0, ancho: 0, largo: 0, promedio: 0, mtrs_consumidos: 0, color: '' })))
 const tallas = ref({
@@ -303,6 +308,23 @@ onMounted(() => {
   loadProgramacionesActivas()
 })
 
+watch(
+  () => [
+    form.value.mtrs_enviados,
+    form.value.faltante_tela,
+    form.value.consumo_promedio,
+    form.value.consumo_metros_gastados,
+    form.value.consumo_cantidad,
+    form.value.total_unidades,
+    form.value.total_metros_consumidos,
+    consumoData.value.faltante_tela
+  ],
+  () => {
+    actualizarCalculosAutomaticos()
+  },
+  { deep: true }
+)
+
 async function load() {
   try {
     const r = await api.get('core/corte/')
@@ -328,9 +350,10 @@ function openDialog() {
   editingUuid.value = null
   programacionSeleccionada.value = null
   form.value = { tercero: '', fecha: '', tela: '', mtrs_enviados: 0, lote: '', orden_produccion: '', notas: '',
-    total_unidades: 0, total_metros_consumidos: 0, mtrs_retazos: 0, promedio: 0, muestras: 0, faltante_tela: 0,
-    consumo_cantidad: 0, consumo_metros_gastados: 0, consumo_ancho: 0, consumo_largo: 0, consumo_promedio: 0, sobrante_tela: 0, firma_responsable: '',
+    total_unidades: 0, total_metros_consumidos: 0, mtrs_retazos: 0, promedio: 0, muestras: 0, faltante_tela: 0, sobrante_tela: 0,
+    consumo_cantidad: 0, consumo_metros_gastados: 0, consumo_ancho: 0, consumo_largo: 0, consumo_promedio: 0, firma_responsable: '',
     estado: 'RECIBO', fecha_estado: new Date().toISOString().split('T')[0] }
+  consumoData.value = { faltante_tela: 0, sobrante_tela: 0 }
   detalles.value = Array.from({ length: 10 }).map((_, i) => ({ numero: i+1, proporcion: '', unidades_cortadas: 0, ancho: 0, largo: 0, promedio: 0, mtrs_consumidos: 0, color: '' }))
   tallas.value = { s: 0, m: 0, l: 0, xl: 0, xxl: 0, t4: 0, t6: 0, t8: 0, t10: 0, t12: 0, t14: 0, t16: 0, t18: 0, t20: 0, t22: 0, t26: 0, t28: 0, t30: 0, t32: 0, t34: 0, t36: 0, t38: 0, t40: 0, t42: 0, t44: 0, t46: 0, total: 0 }
   dialog.value = true
@@ -379,6 +402,12 @@ function openEdit(row) {
     }
     return { numero: i+1, proporcion: '', unidades_cortadas: 0, ancho: 0, largo: 0, promedio: 0, mtrs_consumidos: 0, color: '' }
   })
+  
+  // Cargar datos de consumo al editar
+  consumoData.value = {
+    faltante_tela: 0,
+    sobrante_tela: 0
+  }
 
   dialog.value = true
 }
@@ -426,6 +455,30 @@ function calculateTallaTotal() {
   // si la selección de ref trae tallas, también setear totales en form (opcional)
   form.value.total_unidades = detalles.value.reduce((sum, d) => sum + (Number(d.unidades_cortadas) || 0), 0)
   form.value.total_metros_consumidos = detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0)
+  actualizarCalculosAutomaticos()
+}
+
+function actualizarCalculosAutomaticos() {
+  // ========== SECCIÓN: Totales y consumo ==========
+  // Promedio: total metros consumidos / total unidades cortadas
+  if (form.value.total_unidades > 0) {
+    form.value.promedio = Number((form.value.total_metros_consumidos / form.value.total_unidades).toFixed(3))
+  } else {
+    form.value.promedio = 0
+  }
+
+  // Sobrante de tela (sección principal): mtrs enviados - total metros consumidos - faltante de tela
+  form.value.sobrante_tela = Number((form.value.mtrs_enviados - form.value.total_metros_consumidos - form.value.faltante_tela).toFixed(3))
+
+  // Mtrs retazos: mtrs enviados - total metros consumidos - faltante de tela (IGUAL al sobrante_tela de la sección principal)
+  form.value.mtrs_retazos = form.value.sobrante_tela
+
+  // ========== SECCIÓN: Consumo tela (de bolsillo) ==========
+  // Metros gastados: promedio consumo * total unidades cortadas
+  form.value.consumo_metros_gastados = Number((form.value.consumo_promedio * form.value.total_unidades).toFixed(3))
+
+  // Sobrante de tela (sección consumo): cantidad - metros gastados - faltante de tela consumo
+  consumoData.value.sobrante_tela = Number((form.value.consumo_cantidad - form.value.consumo_metros_gastados - consumoData.value.faltante_tela).toFixed(3))
 }
 
 function nextState(current) {
@@ -588,11 +641,14 @@ function exportCorte(mode) {
 function actualizarTotalesDetalle() {
   form.value.total_unidades = detalles.value.reduce((sum, d) => sum + (Number(d.unidades_cortadas) || 0), 0)
   form.value.total_metros_consumidos = detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0)
+  actualizarCalculosAutomaticos()
 }
 
 async function submit() {
+  actualizarCalculosAutomaticos()
   const payload = {
     ...form.value,
+    sobrante_tela: consumoData.value.sobrante_tela,
     tallas: JSON.stringify(tallas.value),
     detalles_input: detalles.value.filter(d => d.unidades_cortadas || d.mtrs_consumidos || d.proporcion)
   }
