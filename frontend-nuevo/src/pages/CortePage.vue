@@ -8,7 +8,19 @@
             <q-space />
           </div>
 
-          <q-table dense :rows="cortes" :columns="columns" row-key="uuid" flat >
+          <div class="row items-center q-mb-md">
+            <q-input
+              filled
+              v-model="filterCorte"
+              label="Buscar referencia"
+              clearable
+              dense
+              debounce="300"
+              style="max-width: 320px"
+            />
+          </div>
+
+          <q-table dense :rows="filteredCortes" :columns="columns" row-key="uuid" flat >
             <template v-slot:body-cell-acciones="props">
               <q-td align="right">
                 <q-btn dense flat icon="visibility" color="primary" @click.stop="openEdit(props.row)" v-ripple title="Ver / Editar" />
@@ -217,7 +229,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
 import Swal from 'sweetalert2'
 
@@ -229,6 +241,7 @@ const programacionesActivas = ref([])
 const programacionSeleccionada = ref(null)
 const estadoDialog = ref(false)
 const estadoSeleccionado = ref('')
+const filterCorte = ref('')
 const corteSeleccionado = ref(null)
 const exportDialog = ref(false)
 const corteParaExportar = ref(null)
@@ -266,6 +279,7 @@ const estadosCorte = ref([
 
 
 const columns = [
+  { name: 'referencia', label: 'Referencia', field: row => row.orden_produccion || row.referencia || '' },
   { name: 'tercero', label: 'Tercero', field: 'tercero' },
   { name: 'fecha', label: 'Fecha', field: 'fecha' },
   { name: 'tela', label: 'Tela', field: 'tela' },
@@ -273,6 +287,15 @@ const columns = [
   { name: 'fecha_estado', label: 'Fecha Estado', field: 'fecha_estado' },
   { name: 'acciones', label: 'Acciones', field: 'uuid' }
 ]
+
+const filteredCortes = computed(() => {
+  const query = (filterCorte.value || '').toString().trim().toLowerCase()
+  if (!query) return cortes.value
+  return cortes.value.filter(corte => {
+    const referencia = (corte.orden_produccion || corte.referencia || '').toString().toLowerCase()
+    return referencia.includes(query)
+  })
+})
 
 onMounted(() => {
   console.log('onMounted called')
@@ -437,8 +460,8 @@ function cargarProgramacionSeleccionada(prog) {
   } catch (e) {
     console.error('tallas inválidas en programación', e)
   }
-  // cargar orden de produccion con prioridad
-  form.value.orden_produccion = prog.prioridad || ''
+  // cargar orden de producción desde referencia de programación
+  form.value.orden_produccion = prog.numero_orden || prog.prioridad || ''
   console.log('orden_produccion set to:', form.value.orden_produccion)
 }
 

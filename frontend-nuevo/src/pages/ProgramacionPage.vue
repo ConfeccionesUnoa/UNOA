@@ -407,9 +407,24 @@ function calculateTallaTotal() {
 
 async function updatePrioridad(item) {
   try {
-    await api.patch(`core/programacion/${item.uuid}/`, { prioridad: item.prioridad })
+    const targetId = item.uuid || item.id || item.pk
+    if (!targetId) throw new Error('No se encontró identificador de programación para prioridad')
+
+    await api.patch(`core/programacion/${targetId}/`, { prioridad: item.prioridad })
     await loadProgramaciones()
   } catch (err) {
+    // si inicialmente se buscó por uuid y da 404, intenta por pk
+    if (err.response?.status === 404 && item.uuid && (item.id || item.pk)) {
+      const fallback = item.id || item.pk
+      try {
+        await api.patch(`core/programacion/${fallback}/`, { prioridad: item.prioridad })
+        await loadProgramaciones()
+        return
+      } catch (err2) {
+        console.error('Error alternativa prioridad:', err2)
+      }
+    }
+
     console.error(err)
     Swal.fire({ title: 'Error', text: 'No se pudo actualizar prioridad', icon: 'error' })
   }
@@ -512,11 +527,30 @@ async function onSubmit() {
       tallas: JSON.stringify(tallas.value)
     }
 
-    if (editingItem.value) {
+    const canEdit = editingItem.value && (editingItem.value.uuid || editingItem.value.id)
+
+    if (canEdit) {
       // Actualizar
-      data.prioridad = editingItem.value.prioridad // Mantener la prioridad existente
-      await api.patch(`core/programacion/${editingItem.value.uuid}/`, data)
-      Swal.fire({ title: 'Éxito', text: 'Programación actualizada', icon: 'success' })
+      data.prioridad = editingItem.value.prioridad || 0
+      const updateId = editingItem.value.uuid || editingItem.value.id
+      let updated = false
+
+      try {
+        await api.patch(`core/programacion/${updateId}/`, data)
+        updated = true
+      } catch (err) {
+        if (err.response?.status === 404 && editingItem.value.id && editingItem.value.uuid && editingItem.value.id !== editingItem.value.uuid) {
+          // fallback by pk cuando la ruta uuid no existe
+          await api.patch(`core/programacion/${editingItem.value.id}/`, data)
+          updated = true
+        } else {
+          throw err
+        }
+      }
+
+      if (updated) {
+        Swal.fire({ title: 'Éxito', text: 'Programación actualizada', icon: 'success' })
+      }
     } else {
       // Crear nuevo
       const nextPrioridad = await getNextPrioridad()

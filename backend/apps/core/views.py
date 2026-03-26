@@ -187,6 +187,26 @@ class ProgramacionRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = ProgramacionSerializer
     permission_classes = (IsAuthenticated,)
     lookup_field = 'uuid'
+    lookup_url_kwarg = 'uuid'
+
+    def get_object(self):
+        # Intentamos primero buscar por UUID, luego por PK si no existe.
+        lookup_val = self.kwargs.get('uuid') or self.kwargs.get('pk')
+
+        if not lookup_val:
+            raise Http404
+
+        # Primero por uuid
+        try:
+            return Programacion.objects.get(uuid=lookup_val)
+        except (Programacion.DoesNotExist, ValueError):
+            pass
+
+        # Segundo por pk
+        try:
+            return Programacion.objects.get(pk=lookup_val)
+        except (Programacion.DoesNotExist, ValueError):
+            raise Http404
 
 
 class ProgramacionInsumoCreateAPIView(ListCreateAPIView):

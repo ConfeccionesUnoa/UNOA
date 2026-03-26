@@ -37,6 +37,7 @@ urlpatterns = [
     path('presentacion/<uuid:uuid>/', PresentacionRetrieveUpdateDestroyAPIView.as_view(), name='core-presentacion-detail-api'),
     path('programacion/', ProgramacionListCreateAPIView.as_view(), name='core-programacion-api'),
     path('programacion/<uuid:uuid>/', ProgramacionRetrieveUpdateDestroyAPIView.as_view(), name='core-programacion-detail-api'),
+    path('programacion/<int:pk>/', ProgramacionRetrieveUpdateDestroyAPIView.as_view(), name='core-programacion-detail-pk-api'),
     path('programacion/<uuid:uuid>/insumos/', ProgramacionInsumoCreateAPIView.as_view(), name='core-programacion-insumos-api'),
     path('lavanderia/', LavanderiaListCreateAPIView.as_view(), name='core-lavanderia-api'),
     path('lavanderia/<uuid:uuid>/', LavanderiaRetrieveUpdateDestroyAPIView.as_view(), name='core-lavanderia-detail-api'),
