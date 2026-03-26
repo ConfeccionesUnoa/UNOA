@@ -181,6 +181,14 @@ class ProgramacionListCreateAPIView(ListCreateAPIView):
         return Programacion.objects.all()
 
 
+class ProgramacionRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    """Obtener, actualizar y eliminar programaciones individuales"""
+    queryset = Programacion.objects.all()
+    serializer_class = ProgramacionSerializer
+    permission_classes = (IsAuthenticated,)
+    lookup_field = 'uuid'
+
+
 class ProgramacionInsumoCreateAPIView(ListCreateAPIView):
     """Listar insumos de una programacion y crear solicitudes de insumos que afecten inventario"""
     serializer_class = ProgramacionInsumoSerializer

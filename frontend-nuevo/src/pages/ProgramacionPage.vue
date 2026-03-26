@@ -355,7 +355,7 @@ async function loadProveedores() {
     const r = await api.get('core/proveedor/')
     proveedores.value = r.data
   } catch (err) {
-    console.error(err)
+    console.error('Error cargando proveedores:', err)
   }
 }
 
@@ -364,7 +364,7 @@ async function loadClientes() {
     const r = await api.get('core/cliente/')
     clientes.value = r.data
   } catch (err) {
-    console.error(err)
+    console.error('Error cargando clientes:', err)
   }
 }
 
@@ -438,8 +438,8 @@ function creating(item = null) {
     numero_orden.value = item.numero_orden
     codigo.value = item.codigo
     descripcion.value = item.descripcion
-    proveedor.value = item.proveedor ? item.proveedor.uuid : null
-    cliente.value = item.cliente ? item.cliente.uuid : null
+    proveedor.value = item.proveedor ? (item.proveedor.uuid || item.proveedor) : null
+    cliente.value = item.cliente ? (item.cliente.uuid || item.cliente) : null
     fecha_entrega.value = item.fecha_entrega
     tallas.value = item.tallas ? JSON.parse(item.tallas) : {
       s: 0, m: 0, l: 0, xl: 0, xxl: 0,
@@ -491,8 +491,8 @@ async function eliminar(item) {
       await loadHistorial()
       Swal.fire({ title: 'Eliminado', text: 'Programación eliminada correctamente', icon: 'success' })
     } catch (err) {
-      console.error(err)
-      Swal.fire({ title: 'Error', text: 'No se pudo eliminar la programación', icon: 'error' })
+      console.error('Error eliminando:', err)
+      Swal.fire({ title: 'Error', text: `No se pudo eliminar la programación: ${err.response?.data?.detail || err.message}`, icon: 'error' })
     }
   }
 }
@@ -530,9 +530,9 @@ async function onSubmit() {
     await loadProgramaciones()
     await loadHistorial()
   } catch (err) {
-    console.error(err)
+    console.error('Error en onSubmit:', err)
     const action = editingItem.value ? 'actualizar' : 'crear'
-    Swal.fire({ title: 'Error', text: `No se pudo ${action} la programación`, icon: 'error' })
+    Swal.fire({ title: 'Error', text: `No se pudo ${action} la programación: ${err.response?.data?.detail || err.message}`, icon: 'error' })
   }
 }
 
