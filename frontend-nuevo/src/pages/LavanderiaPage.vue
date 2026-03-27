@@ -66,6 +66,19 @@
                   dense
                 />
               </div>
+              <div v-if="form.tipo === 'RECEPCION'" class="col-xs-12 col-sm-6">
+                <q-select
+                  filled
+                  label="Remisión de salida"
+                  v-model="form.remision_salida_uuid"
+                  :options="salidas.map(s => ({ label: s.numero_remision, value: s.uuid }))"
+                  option-value="value"
+                  option-label="label"
+                  emit-value
+                  map-options
+                  dense
+                />
+              </div>
             </div>
 
             <div class="row q-col-gutter-md q-mt-sm">
@@ -119,6 +132,7 @@ import html2canvas from 'html2canvas'
 const lavanderias = ref([])
 const programaciones = ref([])
 const cortes = ref([])
+const salidas = ref([])
 const dialog = ref(false)
 const editing = ref(false)
 const editingUuid = ref(null)
@@ -126,18 +140,19 @@ const filter = ref('')
 
 const form = ref({
   tipo: 'SALIDA',
-  referencia: '',
+  referencia: null,
   fecha: new Date().toISOString().split('T')[0],
   numero_remision: '',
   lavanderia: '',
   cantidad: 0,
   corte_uuid: null,
+  remision_salida_uuid: null,
   cantidad_conformes: 0,
   cantidad_no_conformes: 0,
 })
 
-watch(() => form.value.referencia, (newVal) => {
-  if (newVal !== form.value.referencia) {
+watch(() => form.value.referencia, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
     form.value.corte_uuid = null
   }
 })
@@ -158,6 +173,7 @@ onMounted(() => {
   loadProgramaciones()
   loadCortes()
   loadLavanderias()
+  loadSalidas()
 })
 
 async function loadCortes() {
@@ -188,18 +204,28 @@ async function loadLavanderias() {
   }
 }
 
+async function loadSalidas() {
+  try {
+    const r = await api.get('core/lavanderia/?tipo=SALIDA')
+    salidas.value = r.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 function openDialog(row = null) {
   if (row) {
     editing.value = true
     editingUuid.value = row.uuid
     Object.assign(form.value, {
       tipo: row.tipo,
-      referencia: row.programacion ? row.programacion.uuid : '',
+      referencia: row.programacion?.uuid || null,
       fecha: row.fecha,
       numero_remision: row.numero_remision,
       lavanderia: row.lavanderia,
       cantidad: row.cantidad,
-      corte_uuid: row.corte ? row.corte.uuid : null,
+      corte_uuid: row.corte?.uuid || null,
+      remision_salida_uuid: row.remision_salida_data?.uuid || null,
       cantidad_conformes: row.cantidad_conformes,
       cantidad_no_conformes: row.cantidad_no_conformes,
     })
@@ -208,12 +234,13 @@ function openDialog(row = null) {
     editingUuid.value = null
     form.value = {
       tipo: 'SALIDA',
-      referencia: '',
+      referencia: null,
       fecha: new Date().toISOString().split('T')[0],
       numero_remision: generarNumeroRemision(),
       lavanderia: '',
       cantidad: 0,
       corte_uuid: null,
+      remision_salida_uuid: null,
       cantidad_conformes: 0,
       cantidad_no_conformes: 0,
     }
@@ -222,8 +249,12 @@ function openDialog(row = null) {
 }
 
 function generarNumeroRemision() {
-  const existing = lavanderias.value.filter(l => l.tipo === 'SALIDA' || l.tipo === 'RECEPCION')
-  const next = existing.length + 1
+  const existing = lavanderias.value.map(l => {
+    const match = l.numero_remision.match(/REM-(\d+)/)
+    return match ? parseInt(match[1], 10) : 0
+  })
+  const maxNum = existing.length > 0 ? Math.max(...existing) : 0
+  const next = maxNum + 1
   return `REM-${String(next).padStart(4, '0')}`
 }
 
@@ -231,10 +262,14 @@ async function saveLavanderia() {
   try {
     const selectedProgramacion = programaciones.value.find(p => p.uuid === form.value.referencia)
     const payload = {
-      ...form.value,
-      programacion_uuid: form.value.referencia,
+      tipo: form.value.tipo,
+      programacion_uuid: form.value.referencia || null,
+      corte_uuid: form.value.corte_uuid && typeof form.value.corte_uuid === 'string' ? form.value.corte_uuid : null,
+      remision_salida_uuid: form.value.remision_salida_uuid || null,
       referencia: selectedProgramacion?.numero_orden || '',
-      corte_uuid: form.value.corte_uuid || null,
+      fecha: form.value.fecha,
+      numero_remision: form.value.numero_remision,
+      lavanderia: form.value.lavanderia,
       cantidad: Number(form.value.cantidad) || 0,
       cantidad_conformes: Number(form.value.cantidad_conformes) || 0,
       cantidad_no_conformes: Number(form.value.cantidad_no_conformes) || 0,
@@ -257,13 +292,26 @@ async function saveLavanderia() {
 }
 
 async function deleteRegistro(uuid) {
-  try {
-    await api.delete(`core/lavanderia/${uuid}/`)
-    Swal.fire('Eliminado', 'Registro eliminado', 'success')
-    loadLavanderias()
-  } catch (err) {
-    console.error(err)
-    Swal.fire('Error', 'No se pudo eliminar', 'error')
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    text: 'Esta acción no se puede deshacer',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  })
+
+  if (result.isConfirmed) {
+    try {
+      await api.delete(`core/lavanderia/${uuid}/`)
+      Swal.fire('Eliminado', 'Registro eliminado', 'success')
+      loadLavanderias()
+    } catch (err) {
+      console.error(err)
+      Swal.fire('Error', 'No se pudo eliminar', 'error')
+    }
   }
 }
 

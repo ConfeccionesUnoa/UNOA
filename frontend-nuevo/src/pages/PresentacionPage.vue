@@ -9,16 +9,67 @@
       </div>
     </div>
 
-    <div class="row q-mb-md">
-      <q-input v-model="filter" label="Buscar por referencia" dense outlined />
+    <div class="row items-center q-mb-md">
+      <div class="col-xs-12 col-sm-6">
+        <q-input v-model="filter" label="Buscar por referencia" dense outlined />
+      </div>
+      <div class="col-xs-12 col-sm-6 text-right">
+        <q-btn-toggle
+          v-model="mostrarFinalizadas"
+          :options="[
+            { label: 'Activas', value: false },
+            { label: 'Finalizadas', value: true }
+          ]"
+          color="primary"
+          toggle-color="secondary"
+          unelevated
+        />
+      </div>
     </div>
 
-    <q-table :rows="presentaciones" :columns="columns" row-key="uuid" flat bordered :filter="filter">
+    <q-table :rows="presentacionesFiltradas" :columns="columns" row-key="uuid" flat bordered :filter="filter">
       <template v-slot:body-cell-acciones="props">
         <q-td align="right">
-          <q-btn dense flat color="primary" icon="receipt" @click.stop="emitirRemision(props.row)" v-ripple title="Emitir remisión" />
-          <q-btn dense flat color="accent" icon="edit" @click.stop="openDialog(props.row)" v-ripple title="Editar" />
-          <q-btn dense flat color="negative" icon="delete" @click.stop="deleteRegistro(props.row.uuid)" v-ripple title="Eliminar" />
+          <q-btn
+            dense
+            flat
+            color="secondary"
+            icon="swap_horiz"
+            @click.stop="cambiarEstado(props.row)"
+            v-ripple
+            title="Cambiar estado"
+            :disable="props.row.estado_proceso === 'FIN'"
+          />
+          <q-btn
+            dense
+            flat
+            color="primary"
+            icon="receipt"
+            @click.stop="emitirRemision(props.row)"
+            v-ripple
+            title="Emitir remisión"
+            :disable="props.row.estado_proceso === 'FIN'"
+          />
+          <q-btn
+            dense
+            flat
+            color="accent"
+            icon="edit"
+            @click.stop="openDialog(props.row)"
+            v-ripple
+            title="Editar"
+            :disable="props.row.estado_proceso === 'FIN'"
+          />
+          <q-btn
+            dense
+            flat
+            color="negative"
+            icon="delete"
+            @click.stop="deleteRegistro(props.row.uuid)"
+            v-ripple
+            title="Eliminar"
+            :disable="props.row.estado_proceso === 'FIN'"
+          />
         </q-td>
       </template>
     </q-table>
@@ -61,6 +112,8 @@
                   option-value="value"
                   multiple
                   emit-value
+                  map-options
+                  use-chips
                   dense
                 />
               </div>
@@ -119,6 +172,7 @@ const dialog = ref(false)
 const editing = ref(false)
 const editingUuid = ref(null)
 const filter = ref('')
+const mostrarFinalizadas = ref(false)
 
 const form = ref({
   referencia: '',
@@ -145,6 +199,7 @@ const columns = [
   { name: 'acciones', label: 'Acciones', field: 'uuid' }
 ]
 
+
 const cortesFiltrados = computed(() => {
   if (!form.value.referencia) return []
   const selectedProg = programaciones.value.find(p => p.uuid === form.value.referencia)
@@ -165,6 +220,10 @@ watch(() => form.value.referencia, (newVal) => {
     form.value.numero_remision = generarNumeroRemision()
   }
 })
+
+const presentacionesActivas = computed(() => presentaciones.value.filter(p => p.estado_proceso !== 'FIN'))
+const presentacionesFinalizadas = computed(() => presentaciones.value.filter(p => p.estado_proceso === 'FIN'))
+const presentacionesFiltradas = computed(() => (mostrarFinalizadas.value ? presentacionesFinalizadas.value : presentacionesActivas.value))
 
 onMounted(() => {
   loadProgramaciones()
@@ -209,7 +268,7 @@ function openDialog(row = null) {
   if (row) {
     editing.value = true
     editingUuid.value = row.uuid
-    const selectedProg = programaciones.value.find(p => p.uuid === row.programacion?.uuid || row.programacion)
+    const selectedProg = programaciones.value.find(p => p.uuid === row.programacion?.uuid)
     Object.assign(form.value, {
       referencia: selectedProg?.uuid || '',
       numero_orden: row.numero_orden,
@@ -239,11 +298,10 @@ async function savePresentacion() {
   try {
     const selectedProg = programaciones.value.find(p => p.uuid === form.value.referencia)
     const payload = {
-      programacion_uuid: form.value.referencia,
+      programacion_uuid: form.value.referencia || null,
       numero_orden: form.value.numero_orden,
       referencia: selectedProg?.numero_orden || '',
       fecha: form.value.fecha,
-      numero_remision: form.value.numero_remision,
       estado_proceso: form.value.estado_proceso,
       fecha_finalizacion: form.value.fecha_finalizacion,
       cortes_input: form.value.cortes_input
@@ -273,6 +331,47 @@ async function deleteRegistro(uuid) {
   } catch (err) {
     console.error(err)
     Swal.fire('Error', 'No se pudo eliminar', 'error')
+  }
+}
+
+async function cambiarEstado(row) {
+  if (row.estado_proceso === 'FIN') {
+    Swal.fire('Atención', 'La presentación ya está finalizada y no puede cambiarse.', 'warning')
+    return
+  }
+
+  const inputOptions = {
+    PEN: 'Pendiente',
+    PRO: 'En proceso',
+    FIN: 'Finalizado'
+  }
+
+  const { value: nuevoEstado } = await Swal.fire({
+    title: 'Selecciona el nuevo estado',
+    input: 'select',
+    inputOptions,
+    inputValue: row.estado_proceso,
+    showCancelButton: true,
+    inputValidator: (value) => {
+      if (!value) {
+        return 'Debes seleccionar un estado'
+      }
+      if (value === row.estado_proceso) {
+        return 'Selecciona un estado diferente'
+      }
+      return null
+    }
+  })
+
+  if (!nuevoEstado) return
+
+  try {
+    await api.patch(`core/presentacion/${row.uuid}/`, { estado_proceso: nuevoEstado })
+    Swal.fire('Éxito', `Estado cambiado a ${inputOptions[nuevoEstado]}`, 'success')
+    await loadPresentaciones()
+  } catch (err) {
+    console.error(err)
+    Swal.fire('Error', 'No se pudo cambiar el estado', 'error')
   }
 }
 

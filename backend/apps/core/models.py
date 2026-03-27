@@ -307,6 +307,7 @@ class Lavanderia(TimeStampedModel):
     uuid = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)
     programacion = models.ForeignKey('Programacion', null=True, blank=True, on_delete=models.SET_NULL, related_name='lavanderias')
     corte = models.ForeignKey('Corte', null=True, blank=True, on_delete=models.SET_NULL, related_name='lavanderias')
+    remision_salida = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='recepciones', verbose_name='remisión de salida')
     referencia = models.CharField(max_length=100, verbose_name='referencia')
     fecha = models.DateField(verbose_name='fecha')
     numero_remision = models.CharField(max_length=100, verbose_name='número de remisión')

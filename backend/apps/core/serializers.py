@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Sum
 from .models import Inventario, IngresoInventario, Proveedor, Programacion, ProgramacionInsumo, Categoria, Corte, CorteDetalle, Presentacion, Cliente, Lavanderia
 
 
@@ -132,20 +133,49 @@ class LavanderiaSerializer(serializers.ModelSerializer):
     programacion = ProgramacionSerializer(read_only=True)
     programacion_uuid = serializers.SlugRelatedField(queryset=Programacion.objects.all(), slug_field='uuid', source='programacion', write_only=True, allow_null=True, required=False)
     corte = CorteSerializer(read_only=True)
-    corte_uuid = serializers.SlugRelatedField(queryset=Corte.objects.all(), slug_field='uuid', source='corte', write_only=True, allow_null=True, required=False)
+    remision_salida_data = serializers.SerializerMethodField(read_only=True)
+    remision_salida_uuid = serializers.SlugRelatedField(queryset=Lavanderia.objects.filter(tipo=Lavanderia.TIPO_SALIDA), slug_field='uuid', source='remision_salida', write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = Lavanderia
         fields = [
-            'uuid', 'programacion', 'programacion_uuid', 'corte', 'corte_uuid', 'referencia', 'fecha', 'numero_remision', 'lavanderia',
+            'uuid', 'programacion', 'programacion_uuid', 'corte', 'remision_salida_data', 'remision_salida_uuid', 'referencia', 'fecha', 'numero_remision', 'lavanderia',
             'cantidad', 'tipo', 'cantidad_conformes', 'cantidad_no_conformes', 'created'
         ]
         read_only_fields = ['uuid', 'created']
+        extra_kwargs = {
+            'referencia': {'allow_blank': True},
+        }
+
+    def get_remision_salida_data(self, obj):
+        if obj.remision_salida:
+            return {
+                'uuid': str(obj.remision_salida.uuid),
+                'numero_remision': obj.remision_salida.numero_remision,
+                'cantidad': obj.remision_salida.cantidad
+            }
+        return None
+
+    def validate(self, attrs):
+        if attrs.get('tipo') == Lavanderia.TIPO_RECEPCION:
+            remision_salida = attrs.get('remision_salida')
+            if not remision_salida:
+                raise serializers.ValidationError("Para recepciones, debe seleccionar una remisión de salida.")
+            # Validar cantidad no exceda pendiente
+            cantidad = attrs.get('cantidad', 0)
+            try:
+                recepciones_previas = Lavanderia.objects.filter(remision_salida=remision_salida, tipo=Lavanderia.TIPO_RECEPCION).aggregate(total=Sum('cantidad'))['total'] or 0
+                pendiente = remision_salida.cantidad - recepciones_previas
+                if cantidad > pendiente:
+                    raise serializers.ValidationError(f"La cantidad no puede exceder la pendiente ({pendiente}).")
+            except Exception as e:
+                raise serializers.ValidationError(f"Error validando remisión de salida: {str(e)}")
+        return attrs
 
 
 class PresentacionSerializer(serializers.ModelSerializer):
     cortes = CorteSerializer(many=True, read_only=True)
-    cortes_input = serializers.PrimaryKeyRelatedField(queryset=Corte.objects.all(), many=True, write_only=True, required=False)
+    cortes_input = serializers.SlugRelatedField(queryset=Corte.objects.all(), many=True, slug_field='uuid', write_only=True, required=False)
     programacion_uuid = serializers.SlugRelatedField(queryset=Programacion.objects.all(), slug_field='uuid', write_only=True, source='programacion', allow_null=True, required=False)
 
     class Meta:

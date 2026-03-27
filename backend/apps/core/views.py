@@ -178,7 +178,14 @@ class ProgramacionListCreateAPIView(ListCreateAPIView):
     search_fields = ('numero_orden', 'codigo', 'descripcion', 'proveedor__nombre')
 
     def get_queryset(self):
-        return Programacion.objects.all()
+        # Excluir programaciones que están "finalizadas" (todos los cortes en TERMINADO)
+        from apps.core.models import Corte
+        programaciones_finalizadas = Corte.objects.filter(
+            estado=Corte.ESTADO_TERMINADO
+        ).values_list('orden_produccion', flat=True).distinct()
+        
+        # Obtener programaciones que NO están en la lista de finalizadas
+        return Programacion.objects.exclude(numero_orden__in=programaciones_finalizadas)
 
 
 class ProgramacionRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
@@ -312,6 +319,16 @@ class LavanderiaListCreateAPIView(ListCreateAPIView):
 
     def get_serializer_class(self):
         return LavanderiaSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        else:
+            print("Errores de validación en Lavanderia:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LavanderiaRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
