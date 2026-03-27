@@ -23,11 +23,11 @@
           <q-table dense :rows="filteredCortes" :columns="columns" row-key="uuid" flat >
             <template v-slot:body-cell-acciones="props">
               <q-td align="right">
-                <q-btn dense flat icon="visibility" color="primary" @click.stop="openEdit(props.row)" v-ripple title="Ver / Editar" />
-                <q-btn dense flat icon="edit" color="accent" @click.stop="openEdit(props.row)" v-ripple title="Editar" />
-                <q-btn dense flat icon="play_circle" color="orange" @click.stop="openEstadoDialog(props.row)" v-ripple title="Avanzar proceso" />
+                <q-btn dense flat icon="visibility" color="primary" @click.stop="openEdit(props.row)" v-ripple title="Ver / Editar" :disable="esCorteFinalizado(props.row)" />
+                <q-btn dense flat icon="edit" color="accent" @click.stop="openEdit(props.row)" v-ripple title="Editar" :disable="esCorteFinalizado(props.row)" />
+                <q-btn dense flat icon="play_circle" color="orange" @click.stop="openEstadoDialog(props.row)" v-ripple title="Avanzar proceso" :disable="esCorteFinalizado(props.row)" />
                 <q-btn dense flat icon="picture_as_pdf" color="blue" @click.stop="openExportDialog(props.row)" v-ripple title="Exportar" />
-                <q-btn dense flat icon="delete" color="negative" @click.stop="deleteCorte(props.row.uuid)" v-ripple title="Eliminar" />
+                <q-btn dense flat icon="delete" color="negative" @click.stop="deleteCorte(props.row.uuid)" v-ripple title="Eliminar" :disable="esCorteFinalizado(props.row)" />
               </q-td>
             </template>
           </q-table>
@@ -92,7 +92,18 @@
             <q-form @submit.prevent="submit">
               <div class="row q-col-gutter-md">
                 <div class="col-xs-6">
-                  <q-select filled v-model="programacionSeleccionada" :options="programacionesActivas" option-label="numero_orden" label="Referencia" dense @update:model-value="(prog) => { console.log('q-select update prog:', prog); cargarProgramacionSeleccionada(prog); }" />
+                  <q-select
+                    filled
+                    v-model="programacionSeleccionada"
+                    :options="programacionesDisponibles"
+                    option-label="numero_orden"
+                    option-value="uuid"
+                    label="Referencia"
+                    dense
+                    emit-value
+                    map-options
+                    @update:model-value="(prog) => { console.log('q-select update prog:', prog); cargarProgramacionSeleccionada(prog); }"
+                  />
                 </div>
                 <div class="col-xs-6">
                   <q-input filled v-model="form.fecha" label="FECHA" dense type="date" />
@@ -235,6 +246,7 @@ import { api } from 'src/boot/axios'
 import Swal from 'sweetalert2'
 
 const cortes = ref([])
+const presentaciones = ref([])
 const dialog = ref(false)
 const editing = ref(false)
 const editingUuid = ref(null)
@@ -293,10 +305,25 @@ const columns = [
   { name: 'acciones', label: 'Acciones', field: 'uuid' }
 ]
 
+const programacionesFinalizadas = computed(() => {
+  const finalizados = new Set(
+    presentaciones.value
+      .filter(p => p.estado_proceso === 'FIN')
+      .map(p => p.referencia)
+      .filter(Boolean)
+  )
+  return finalizados
+})
+
+const programacionesDisponibles = computed(() => {
+  return programacionesActivas.value.filter(p => !programacionesFinalizadas.value.has(p.numero_orden))
+})
+
 const filteredCortes = computed(() => {
   const query = (filterCorte.value || '').toString().trim().toLowerCase()
-  if (!query) return cortes.value
-  return cortes.value.filter(corte => {
+  let list = cortes.value
+  if (!query) return list
+  return list.filter(corte => {
     const referencia = (corte.orden_produccion || corte.referencia || '').toString().toLowerCase()
     return referencia.includes(query)
   })
@@ -306,6 +333,7 @@ onMounted(() => {
   console.log('onMounted called')
   load()
   loadProgramacionesActivas()
+  loadPresentaciones()
 })
 
 watch(
@@ -337,11 +365,20 @@ async function load() {
 async function loadProgramacionesActivas() {
   try {
     const r = await api.get('core/programacion/')
-    // considerar solo referencias no finalizadas (pueden tener estado según módulo programacion si existe)
-    programacionesActivas.value = r.data // quitar filter por ahora
+    programacionesActivas.value = r.data
     console.log('programacionesActivas loaded:', programacionesActivas.value)
   } catch (err) {
     console.error('Error loading programaciones:', err)
+  }
+}
+
+async function loadPresentaciones() {
+  try {
+    const r = await api.get('core/presentacion/')
+    presentaciones.value = r.data
+    console.log('presentaciones loaded:', presentaciones.value)
+  } catch (err) {
+    console.error('Error loading presentaciones:', err)
   }
 }
 
@@ -495,10 +532,29 @@ function cargarProgramacionSeleccionada(prog) {
     console.log('no prog')
     return
   }
+
+  let programa = null
+  if (typeof prog === 'string') {
+    programa = programacionesActivas.value.find(p => p.uuid === prog) || programacionesDisponibles.value.find(p => p.uuid === prog)
+  } else {
+    programa = prog
+  }
+
+  if (!programa) {
+    console.warn('Programación seleccionada no encontrada:', prog)
+    return
+  }
+
+  if (programacionesFinalizadas.value.has(programa.numero_orden)) {
+    Swal.fire('Atención', 'Esta referencia está finalizada y no se puede usar.', 'warning')
+    programacionSeleccionada.value = null
+    return
+  }
+
   // cargar tallas programadas
-  console.log('tallas from prog:', prog.tallas)
+  console.log('tallas from prog:', programa.tallas)
   try {
-    const t = prog.tallas ? JSON.parse(prog.tallas) : {}
+    const t = programa.tallas ? JSON.parse(programa.tallas) : {}
     console.log('parsed tallas:', t)
     tallas.value = {
       s: t.s || 0, m: t.m || 0, l: t.l || 0, xl: t.xl || 0, xxl: t.xxl || 0,
@@ -513,16 +569,25 @@ function cargarProgramacionSeleccionada(prog) {
   } catch (e) {
     console.error('tallas inválidas en programación', e)
   }
-  // cargar orden de producción desde referencia de programación
-  form.value.orden_produccion = prog.numero_orden || prog.prioridad || ''
+
+  form.value.orden_produccion = programa.numero_orden || ''
   console.log('orden_produccion set to:', form.value.orden_produccion)
 }
 
 
 function openEstadoDialog(corte) {
+  if (esCorteFinalizado(corte)) {
+    Swal.fire('Atención', 'No se puede cambiar estado de un corte cuya referencia está finalizada.', 'warning')
+    return
+  }
   corteSeleccionado.value = corte
   estadoSeleccionado.value = corte.estado || estadosCorte.value[0] || 'RECIBO'
   estadoDialog.value = true
+}
+
+function esCorteFinalizado(corte) {
+  const orden = (corte.orden_produccion || corte.referencia || '').toString()
+  return programacionesFinalizadas.value.has(orden)
 }
 
 async function confirmarEstado() {

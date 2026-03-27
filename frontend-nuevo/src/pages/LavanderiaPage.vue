@@ -9,16 +9,57 @@
       </div>
     </div>
 
-    <div class="row q-mb-md">
-      <q-input v-model="filter" label="Buscar por referencia" dense />
+    <div class="row items-center q-mb-md">
+      <div class="col-xs-12 col-sm-6">
+        <q-input v-model="filter" label="Buscar por referencia" dense />
+      </div>
+      <div class="col-xs-12 col-sm-6 text-right">
+        <q-btn-toggle
+          v-model="mostrarFinalizadas"
+          :options="[
+            { label: 'Activas', value: false },
+            { label: 'Finalizadas', value: true }
+          ]"
+          color="primary"
+          toggle-color="secondary"
+          unelevated
+        />
+      </div>
     </div>
 
-    <q-table :rows="lavanderias" :columns="columns" row-key="uuid" flat bordered :filter="filter">
+    <q-table :rows="lavanderiasFiltradas" :columns="columns" row-key="uuid" flat bordered>
       <template v-slot:body-cell-acciones="props">
         <q-td align="right">
-          <q-btn dense flat color="primary" icon="receipt" @click.stop="emitirRemision(props.row)" v-ripple title="Emitir remisión" />
-          <q-btn dense flat color="accent" icon="edit" @click.stop="openDialog(props.row)" v-ripple title="Editar" />
-          <q-btn dense flat color="negative" icon="delete" @click.stop="deleteRegistro(props.row.uuid)" v-ripple title="Eliminar" />
+          <q-btn
+            dense
+            flat
+            color="primary"
+            icon="receipt"
+            @click.stop="emitirRemision(props.row)"
+            v-ripple
+            title="Emitir remisión"
+            :disable="esLavanderiaFinalizada(props.row)"
+          />
+          <q-btn
+            dense
+            flat
+            color="accent"
+            icon="edit"
+            @click.stop="openDialog(props.row)"
+            v-ripple
+            title="Editar"
+            :disable="esLavanderiaFinalizada(props.row)"
+          />
+          <q-btn
+            dense
+            flat
+            color="negative"
+            icon="delete"
+            @click.stop="deleteRegistro(props.row.uuid)"
+            v-ripple
+            title="Eliminar"
+            :disable="esLavanderiaFinalizada(props.row)"
+          />
         </q-td>
       </template>
     </q-table>
@@ -48,7 +89,7 @@
                   filled
                   label="Referencia" 
                   v-model="form.referencia"
-                  :options="programaciones.map(p => ({ label: p.numero_orden, value: p.uuid }))"
+                  :options="programacionesDisponibles.map(p => ({ label: p.numero_orden, value: p.uuid }))"
                   emit-value
                   map-options
                   dense
@@ -123,7 +164,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
@@ -132,11 +173,13 @@ import html2canvas from 'html2canvas'
 const lavanderias = ref([])
 const programaciones = ref([])
 const cortes = ref([])
+const presentaciones = ref([])
 const salidas = ref([])
 const dialog = ref(false)
 const editing = ref(false)
 const editingUuid = ref(null)
 const filter = ref('')
+const mostrarFinalizadas = ref(false)
 
 const form = ref({
   tipo: 'SALIDA',
@@ -174,6 +217,7 @@ onMounted(() => {
   loadCortes()
   loadLavanderias()
   loadSalidas()
+  loadPresentaciones()
 })
 
 async function loadCortes() {
@@ -193,6 +237,41 @@ async function loadProgramaciones() {
   } catch (err) {
     console.error(err)
   }
+}
+
+async function loadPresentaciones() {
+  try {
+    const r = await api.get('core/presentacion/')
+    presentaciones.value = r.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const programacionesFinalizadas = computed(() => {
+  return new Set(
+    presentaciones.value
+      .filter(p => p.estado_proceso === 'FIN')
+      .map(p => p.referencia)
+      .filter(Boolean)
+  )
+})
+
+const programacionesDisponibles = computed(() => {
+  return programaciones.value.filter(p => !programacionesFinalizadas.value.has(p.numero_orden))
+})
+
+const lavanderiasFiltradas = computed(() => {
+  const query = (filter.value || '').toString().trim().toLowerCase()
+  const base = mostrarFinalizadas.value
+    ? lavanderias.value.filter(l => programacionesFinalizadas.value.has(l.referencia))
+    : lavanderias.value.filter(l => !programacionesFinalizadas.value.has(l.referencia))
+  if (!query) return base
+  return base.filter(item => (item.referencia || '').toLowerCase().includes(query))
+})
+
+function esLavanderiaFinalizada(row) {
+  return programacionesFinalizadas.value.has((row.referencia || '').toString())
 }
 
 async function loadLavanderias() {
