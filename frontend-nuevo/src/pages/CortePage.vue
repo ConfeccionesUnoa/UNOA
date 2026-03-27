@@ -473,11 +473,14 @@ function calculateMetrics(index) {
   const detalle = detalles.value[index]
   // promedio = (largo / proporcion) * 2
   if (detalle.proporcion && detalle.largo) {
-    detalle.promedio = (detalle.largo / detalle.proporcion) * 2
+    const rawPromedio = (Number(detalle.largo) / Number(detalle.proporcion)) * 2
+    detalle.promedio = Number(rawPromedio.toFixed(2))
   }
   // mtrs_consumidos = promedio * unidades_cortadas
   if (detalle.promedio && detalle.unidades_cortadas) {
-    detalle.mtrs_consumidos = detalle.promedio * detalle.unidades_cortadas
+    const rawMtrs = Number(detalle.promedio) * Number(detalle.unidades_cortadas)
+    // guardar con hasta 8 dígitos totales y 2 decimales en la parte fraccional
+    detalle.mtrs_consumidos = Number(rawMtrs.toFixed(6))
   }
   actualizarTotalesDetalle()
 }
@@ -705,18 +708,70 @@ function exportCorte(mode) {
 
 function actualizarTotalesDetalle() {
   form.value.total_unidades = detalles.value.reduce((sum, d) => sum + (Number(d.unidades_cortadas) || 0), 0)
-  form.value.total_metros_consumidos = detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0)
+  form.value.total_metros_consumidos = Number(detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0).toFixed(6))
   actualizarCalculosAutomaticos()
 }
 
 async function submit() {
   actualizarCalculosAutomaticos()
+
+  const detalles_input = detalles.value
+    .filter(d => Number(d.unidades_cortadas) > 0 || Number(d.mtrs_consumidos) > 0 || String(d.proporcion || '').trim() !== '')
+    .map(d => {
+      const safe = v => {
+        if (v === null || v === undefined || v === '') return 0
+        const parsed = Number(String(v).replace(',', '.'))
+        return Number.isNaN(parsed) ? 0 : parsed
+      }
+
+      const promedio = safe(d.promedio)
+      const mtrs_consumidos = safe(d.mtrs_consumidos)
+      return {
+        numero: Number(d.numero) || 0,
+        proporcion: String(d.proporcion || '').trim(),
+        unidades_cortadas: Number(d.unidades_cortadas) || 0,
+        ancho: Number(safe(d.ancho).toFixed(6)),
+        largo: Number(safe(d.largo).toFixed(6)),
+        promedio: Number(promedio.toFixed(2)),
+        mtrs_consumidos: Number(mtrs_consumidos.toFixed(6)),
+        color: d.color || ''
+      }
+    })
+
+  // Validaciones de precisión/longitud configuración backend
+  for (const [idx, detalle] of detalles_input.entries()) {
+    if (detalle.promedio > 99999999.99) {
+      Swal.fire('Error', `Fila ${idx + 1}: promedio fuera de rango.`, 'error')
+      return
+    }
+
+    if (!Number.isFinite(detalle.promedio) || Number(detalle.promedio).toFixed(2).split('.')[1].length > 2) {
+      Swal.fire('Error', `Fila ${idx + 1}: promedio debe tener máximo 2 decimales.`, 'error')
+      return
+    }
+
+    if (!Number.isFinite(detalle.mtrs_consumidos) || Number(detalle.mtrs_consumidos).toFixed(6).replace('.', '').length > 8) {
+      Swal.fire('Error', `Fila ${idx + 1}: metros consumidos debe tener máximo 8 dígitos totales (incluye enteros y decimales).`, 'error')
+      return
+    }
+  }
+
+  if (detalles_input.length === 0) {
+    Swal.fire('Atención', 'Agrega al menos un detalle con unidades cortadas o metros consumidos.', 'warning')
+    return
+  }
+
   const payload = {
     ...form.value,
-    sobrante_tela: consumoData.value.sobrante_tela,
+    total_unidades: Number(form.value.total_unidades) || 0,
+    total_metros_consumidos: Number(form.value.total_metros_consumidos) || 0,
+    mtrs_retazos: Number(form.value.mtrs_retazos) || 0,
+    promedio: Number(parseFloat(form.value.promedio || 0).toFixed(2)),
+    sobrante_tela: Number(consumoData.value.sobrante_tela) || 0,
     tallas: JSON.stringify(tallas.value),
-    detalles_input: detalles.value.filter(d => d.unidades_cortadas || d.mtrs_consumidos || d.proporcion)
+    detalles_input
   }
+
   try {
     if (editing.value && editingUuid.value) {
       await api.put(`core/corte/${editingUuid.value}/`, payload)
@@ -728,7 +783,8 @@ async function submit() {
     await load()
   } catch (err) {
     console.error(err)
-    Swal.fire('Error', err?.response?.data?.detail || 'No se pudo crear', 'error')
+    const message = err?.response?.data || err?.response?.data?.detail || 'No se pudo crear'
+    Swal.fire('Error', JSON.stringify(message), 'error')
   }
 }
 </script>
