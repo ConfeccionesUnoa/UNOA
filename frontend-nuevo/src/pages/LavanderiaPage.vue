@@ -112,7 +112,7 @@
                   filled
                   label="Remisión de salida"
                   v-model="form.remision_salida_uuid"
-                  :options="salidas.map(s => ({ label: s.numero_remision, value: s.uuid }))"
+                  :options="remisionesDisponiblesFiltro.map(s => ({ label: `${s.numero_remision} (saldo ${s.saldo})`, value: s.uuid }))"
                   option-value="value"
                   option-label="label"
                   emit-value
@@ -268,6 +268,42 @@ const lavanderiasFiltradas = computed(() => {
     : lavanderias.value.filter(l => !programacionesFinalizadas.value.has(l.referencia))
   if (!query) return base
   return base.filter(item => (item.referencia || '').toLowerCase().includes(query))
+})
+
+const remisionesDisponibles = computed(() => {
+  const saldoPorSalida = salidas.value.reduce((acc, salida) => {
+    acc[salida.uuid] = Number(salida.cantidad || 0)
+    return acc
+  }, {})
+
+  lavanderias.value
+    .filter(r => r.tipo === 'RECEPCION' && r.remision_salida_data && r.remision_salida_data.uuid)
+    .forEach(recepcion => {
+      const sid = recepcion.remision_salida_data.uuid
+      if (Object.prototype.hasOwnProperty.call(saldoPorSalida, sid)) {
+        saldoPorSalida[sid] -= Number(recepcion.cantidad || 0)
+      }
+    })
+
+  return salidas.value
+    .map(salida => ({
+      ...salida,
+      saldo: Number(saldoPorSalida[salida.uuid] || 0)
+    }))
+})
+
+const remisionesDisponiblesFiltro = computed(() => {
+  const base = remisionesDisponibles.value.filter(salida => salida.saldo > 0)
+  if (!editing.value || !form.value.remision_salida_uuid) {
+    return base
+  }
+
+  if (base.some(s => s.uuid === form.value.remision_salida_uuid)) {
+    return base
+  }
+
+  const current = remisionesDisponibles.value.find(s => s.uuid === form.value.remision_salida_uuid)
+  return current ? [...base, current] : base
 })
 
 function esLavanderiaFinalizada(row) {
