@@ -38,7 +38,7 @@
             @click.stop="cambiarEstado(props.row)"
             v-ripple
             title="Cambiar estado"
-            :disable="props.row.estado_proceso === 'FIN'"
+            :disable="bloquearFinalizado(props.row)"
           />
           <q-btn
             dense
@@ -48,7 +48,7 @@
             @click.stop="emitirRemision(props.row)"
             v-ripple
             title="Emitir remisión"
-            :disable="props.row.estado_proceso === 'FIN'"
+            :disable="bloquearFinalizado(props.row)"
           />
           <q-btn
             dense
@@ -58,7 +58,7 @@
             @click.stop="openDialog(props.row)"
             v-ripple
             title="Editar"
-            :disable="props.row.estado_proceso === 'FIN'"
+            :disable="bloquearFinalizado(props.row)"
           />
           <q-btn
             dense
@@ -68,7 +68,7 @@
             @click.stop="deleteRegistro(props.row.uuid)"
             v-ripple
             title="Eliminar"
-            :disable="props.row.estado_proceso === 'FIN'"
+            :disable="bloquearFinalizado(props.row)"
           />
         </q-td>
       </template>
@@ -161,6 +161,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/auth'
 import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -173,6 +174,10 @@ const editing = ref(false)
 const editingUuid = ref(null)
 const filter = ref('')
 const mostrarFinalizadas = ref(false)
+
+const auth = useAuthStore()
+
+const bloquearFinalizado = (row) => row.estado_proceso === 'FIN' && !auth.isAdmin
 
 const form = ref({
   referencia: '',
@@ -324,6 +329,12 @@ async function savePresentacion() {
 }
 
 async function deleteRegistro(uuid) {
+  const item = presentaciones.value.find(p => p.uuid === uuid)
+  if (item && item.estado_proceso === 'FIN' && !auth.isAdmin) {
+    Swal.fire('Atención', 'La presentación finalizada no puede eliminarse.', 'warning')
+    return
+  }
+
   try {
     await api.delete(`core/presentacion/${uuid}/`)
     Swal.fire('Eliminado', 'Presentación eliminada', 'success')
@@ -335,7 +346,7 @@ async function deleteRegistro(uuid) {
 }
 
 async function cambiarEstado(row) {
-  if (row.estado_proceso === 'FIN') {
+  if (row.estado_proceso === 'FIN' && !auth.isAdmin) {
     Swal.fire('Atención', 'La presentación ya está finalizada y no puede cambiarse.', 'warning')
     return
   }
