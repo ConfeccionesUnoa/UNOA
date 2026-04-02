@@ -4,8 +4,9 @@
       <transition appear enter-active-class="animated fadeIn" leave-active-class="animated fadeOut">
         <div>
           <div class="row items-center q-mb-sm">
-            <q-btn unelevated rounded icon="add" color="primary" @click="openDialog" label="Agregar Corte" />
-            <q-space />
+            <Can I="create" an="Corte">
+              <q-btn unelevated rounded icon="add" color="primary" @click="openDialog" label="Agregar Corte" />
+            </Can>
           </div>
 
           <div class="row items-center q-mb-md">
@@ -23,11 +24,21 @@
           <q-table dense :rows="filteredCortes" :columns="columns" row-key="uuid" flat >
             <template v-slot:body-cell-acciones="props">
               <q-td align="right">
-                <q-btn dense flat icon="visibility" color="primary" @click.stop="openEdit(props.row)" v-ripple title="Ver / Editar" :disable="esCorteFinalizado(props.row)" />
-                <q-btn dense flat icon="edit" color="accent" @click.stop="openEdit(props.row)" v-ripple title="Editar" :disable="esCorteFinalizado(props.row)" />
-                <q-btn dense flat icon="play_circle" color="orange" @click.stop="openEstadoDialog(props.row)" v-ripple title="Avanzar proceso" :disable="esCorteFinalizado(props.row)" />
-                <q-btn dense flat icon="picture_as_pdf" color="blue" @click.stop="openExportDialog(props.row)" v-ripple title="Exportar" />
-                <q-btn dense flat icon="delete" color="negative" @click.stop="deleteCorte(props.row.uuid)" v-ripple title="Eliminar" :disable="esCorteFinalizado(props.row)" />
+                <Can I="read" an="Corte">
+                  <q-btn dense flat icon="visibility" color="primary" @click.stop="openEdit(props.row)" v-ripple title="Ver / Editar" :disable="esCorteFinalizado(props.row)" />
+                </Can>
+                <Can I="update" an="Corte">
+                  <q-btn dense flat icon="edit" color="accent" @click.stop="openEdit(props.row)" v-ripple title="Editar" :disable="esCorteFinalizado(props.row)" />
+                </Can>
+                <Can I="finish" an="Corte">
+                  <q-btn dense flat icon="play_circle" color="orange" @click.stop="openEstadoDialog(props.row)" v-ripple title="Avanzar proceso" :disable="esCorteFinalizado(props.row)" />
+                </Can>
+                <Can I="detail" an="Corte">
+                  <q-btn dense flat icon="picture_as_pdf" color="blue" @click.stop="openExportDialog(props.row)" v-ripple title="Exportar" />
+                </Can>
+                <Can I="delete" an="Corte">
+                  <q-btn dense flat icon="delete" color="negative" @click.stop="deleteCorte(props.row.uuid)" v-ripple title="Eliminar" :disable="esCorteFinalizado(props.row)" />
+                </Can>
               </q-td>
             </template>
           </q-table>
@@ -243,6 +254,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
+import { ability } from 'src/services/ability'
 import Swal from 'sweetalert2'
 
 const cortes = ref([])
@@ -383,6 +395,11 @@ async function loadPresentaciones() {
 }
 
 function openDialog() {
+  if (!ability.can('create', 'Corte')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para crear cortes.', 'warning')
+    return
+  }
+
   editing.value = false
   editingUuid.value = null
   programacionSeleccionada.value = null
@@ -397,6 +414,11 @@ function openDialog() {
 }
 
 function openEdit(row) {
+  if (!ability.can('read', 'Corte') && !ability.can('update', 'Corte')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para ver o editar cortes.', 'warning')
+    return
+  }
+
   editing.value = true
   editingUuid.value = row.uuid
   // llenar form con datos del registro
@@ -450,6 +472,11 @@ function openEdit(row) {
 }
 
 async function deleteCorte(uuid) {
+  if (!ability.can('delete', 'Corte')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para eliminar cortes.', 'warning')
+    return
+  }
+
   const res = await Swal.fire({
     title: 'Confirmar eliminación',
     text: '¿Eliminar este corte?',
@@ -579,6 +606,10 @@ function cargarProgramacionSeleccionada(prog) {
 
 
 function openEstadoDialog(corte) {
+  if (!ability.can('finish', 'Corte')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para cambiar estado de cortes.', 'warning')
+    return
+  }
   if (esCorteFinalizado(corte)) {
     Swal.fire('Atención', 'No se puede cambiar estado de un corte cuya referencia está finalizada.', 'warning')
     return
@@ -609,6 +640,10 @@ async function confirmarEstado() {
 }
 
 function openExportDialog(corte) {
+  if (!ability.can('detail', 'Corte')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para exportar cortes.', 'warning')
+    return
+  }
   corteParaExportar.value = corte
   exportDialog.value = true
 }

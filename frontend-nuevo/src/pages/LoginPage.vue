@@ -184,15 +184,42 @@ async function submitReset() {
 }
 
 // === CASL ===
+function setRoleAbilities(rol) {
+  const { can, rules } = new AbilityBuilder(ability.constructor)
+
+  switch (rol) {
+    case 'AD':
+      can('manage', 'all')
+      break
+    case 'CO':
+      can(['read'], ['Programacion', 'Corte', 'Presentacion', 'Lavanderia', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], 'Corte')
+      // el acceso a inicio/parametros/usuarios se controla por sujeto explícito
+      break
+    case 'IN':
+      can(['read'], ['Programacion', 'Corte', 'Presentacion', 'Lavanderia', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], 'Programacion')
+      break
+    case 'PR':
+      can(['read'], ['Corte', 'Programacion', 'Lavanderia', 'Presentacion', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], ['Lavanderia', 'Presentacion'])
+      break
+    case 'PL':
+      can(['read'], ['Corte', 'Programacion', 'Lavanderia', 'Presentacion', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], 'Corte')
+      break
+    default:
+      // Sin acceso por defecto
+      break
+  }
+
+  ability.update(rules)
+}
+
 watch(
   () => auth.rol,
   (newRol) => {
-    const { can, rules } = new AbilityBuilder(ability.constructor)
-    if (newRol === 'AD') {
-      can('manage', 'all')
-      can(['create', 'read', 'update', 'delete', 'detail', 'finish'], ['Usuarios'])
-    }
-    ability.update(rules)
+    setRoleAbilities(newRol)
   }
 )
 

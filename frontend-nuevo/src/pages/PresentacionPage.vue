@@ -5,7 +5,9 @@
         <h5>Presentaciones</h5>
       </div>
       <div class="col-auto">
-        <q-btn color="primary" label="Nueva presentación" icon="add" @click="openDialog()" />
+        <Can I="create" an="Presentacion">
+          <q-btn color="primary" label="Nueva presentación" icon="add" @click="openDialog()" />
+        </Can>
       </div>
     </div>
 
@@ -30,46 +32,54 @@
     <q-table :rows="presentacionesFiltradas" :columns="columns" row-key="uuid" flat bordered :filter="filter">
       <template v-slot:body-cell-acciones="props">
         <q-td align="right">
-          <q-btn
-            dense
-            flat
-            color="secondary"
-            icon="swap_horiz"
-            @click.stop="cambiarEstado(props.row)"
-            v-ripple
-            title="Cambiar estado"
-            :disable="bloquearFinalizado(props.row)"
-          />
-          <q-btn
-            dense
-            flat
-            color="primary"
-            icon="receipt"
-            @click.stop="emitirRemision(props.row)"
-            v-ripple
-            title="Emitir remisión"
-            :disable="bloquearFinalizado(props.row)"
-          />
-          <q-btn
-            dense
-            flat
-            color="accent"
-            icon="edit"
-            @click.stop="openDialog(props.row)"
-            v-ripple
-            title="Editar"
-            :disable="bloquearFinalizado(props.row)"
-          />
-          <q-btn
-            dense
-            flat
-            color="negative"
-            icon="delete"
-            @click.stop="deleteRegistro(props.row.uuid)"
-            v-ripple
-            title="Eliminar"
-            :disable="bloquearFinalizado(props.row)"
-          />
+          <Can I="finish" an="Presentacion">
+            <q-btn
+              dense
+              flat
+              color="secondary"
+              icon="swap_horiz"
+              @click.stop="cambiarEstado(props.row)"
+              v-ripple
+              title="Cambiar estado"
+              :disable="bloquearFinalizado(props.row)"
+            />
+          </Can>
+          <Can I="detail" an="Presentacion">
+            <q-btn
+              dense
+              flat
+              color="primary"
+              icon="receipt"
+              @click.stop="emitirRemision(props.row)"
+              v-ripple
+              title="Emitir remisión"
+              :disable="bloquearFinalizado(props.row)"
+            />
+          </Can>
+          <Can I="update" an="Presentacion">
+            <q-btn
+              dense
+              flat
+              color="accent"
+              icon="edit"
+              @click.stop="openDialog(props.row)"
+              v-ripple
+              title="Editar"
+              :disable="bloquearFinalizado(props.row)"
+            />
+          </Can>
+          <Can I="delete" an="Presentacion">
+            <q-btn
+              dense
+              flat
+              color="negative"
+              icon="delete"
+              @click.stop="deleteRegistro(props.row.uuid)"
+              v-ripple
+              title="Eliminar"
+              :disable="bloquearFinalizado(props.row)"
+            />
+          </Can>
         </q-td>
       </template>
     </q-table>
@@ -162,6 +172,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import { useAuthStore } from 'src/stores/auth'
+import { ability } from 'src/services/ability'
 import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -270,6 +281,15 @@ function generarNumeroRemision() {
 }
 
 function openDialog(row = null) {
+  if (row && !ability.can('update', 'Presentacion')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para editar presentaciones.', 'warning')
+    return
+  }
+  if (!row && !ability.can('create', 'Presentacion')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para crear presentaciones.', 'warning')
+    return
+  }
+
   if (row) {
     editing.value = true
     editingUuid.value = row.uuid
@@ -300,6 +320,15 @@ function openDialog(row = null) {
 }
 
 async function savePresentacion() {
+  if (editing.value && !ability.can('update', 'Presentacion')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para actualizar presentaciones.', 'warning')
+    return
+  }
+  if (!editing.value && !ability.can('create', 'Presentacion')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para crear presentaciones.', 'warning')
+    return
+  }
+
   try {
     const selectedProg = programaciones.value.find(p => p.uuid === form.value.referencia)
     const payload = {
@@ -329,6 +358,11 @@ async function savePresentacion() {
 }
 
 async function deleteRegistro(uuid) {
+  if (!ability.can('delete', 'Presentacion')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para eliminar presentaciones.', 'warning')
+    return
+  }
+
   const item = presentaciones.value.find(p => p.uuid === uuid)
   if (item && item.estado_proceso === 'FIN' && !auth.isAdmin) {
     Swal.fire('Atención', 'La presentación finalizada no puede eliminarse.', 'warning')
@@ -346,6 +380,10 @@ async function deleteRegistro(uuid) {
 }
 
 async function cambiarEstado(row) {
+  if (!ability.can('finish', 'Presentacion')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para cambiar el estado de las presentaciones.', 'warning')
+    return
+  }
   if (row.estado_proceso === 'FIN' && !auth.isAdmin) {
     Swal.fire('Atención', 'La presentación ya está finalizada y no puede cambiarse.', 'warning')
     return
@@ -387,6 +425,11 @@ async function cambiarEstado(row) {
 }
 
 async function emitirRemision(row) {
+  if (!ability.can('detail', 'Presentacion')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para emitir remisiones de presentación.', 'warning')
+    return
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
       <h1 style="text-align: center; color: #333;">Remisión de Presentación</h1>

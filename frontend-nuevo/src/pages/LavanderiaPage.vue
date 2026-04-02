@@ -5,7 +5,9 @@
         <h5>Lavandería</h5>
       </div>
       <div class="col-auto">
-        <q-btn color="primary" label="Nueva solicitud" icon="add" @click="openDialog()" />
+        <Can I="create" an="Lavanderia">
+          <q-btn color="primary" label="Nueva solicitud" icon="add" @click="openDialog()" />
+        </Can>
       </div>
     </div>
 
@@ -30,36 +32,42 @@
     <q-table :rows="lavanderiasFiltradas" :columns="columns" row-key="uuid" flat bordered>
       <template v-slot:body-cell-acciones="props">
         <q-td align="right">
-          <q-btn
-            dense
-            flat
-            color="primary"
-            icon="receipt"
-            @click.stop="emitirRemision(props.row)"
-            v-ripple
-            title="Emitir remisión"
-            :disable="esLavanderiaFinalizada(props.row)"
-          />
-          <q-btn
-            dense
-            flat
-            color="accent"
-            icon="edit"
-            @click.stop="openDialog(props.row)"
-            v-ripple
-            title="Editar"
-            :disable="esLavanderiaFinalizada(props.row)"
-          />
-          <q-btn
-            dense
-            flat
-            color="negative"
-            icon="delete"
-            @click.stop="deleteRegistro(props.row.uuid)"
-            v-ripple
-            title="Eliminar"
-            :disable="esLavanderiaFinalizada(props.row)"
-          />
+          <Can I="detail" an="Lavanderia">
+            <q-btn
+              dense
+              flat
+              color="primary"
+              icon="receipt"
+              @click.stop="emitirRemision(props.row)"
+              v-ripple
+              title="Emitir remisión"
+              :disable="esLavanderiaFinalizada(props.row)"
+            />
+          </Can>
+          <Can I="update" an="Lavanderia">
+            <q-btn
+              dense
+              flat
+              color="accent"
+              icon="edit"
+              @click.stop="openDialog(props.row)"
+              v-ripple
+              title="Editar"
+              :disable="esLavanderiaFinalizada(props.row)"
+            />
+          </Can>
+          <Can I="delete" an="Lavanderia">
+            <q-btn
+              dense
+              flat
+              color="negative"
+              icon="delete"
+              @click.stop="deleteRegistro(props.row.uuid)"
+              v-ripple
+              title="Eliminar"
+              :disable="esLavanderiaFinalizada(props.row)"
+            />
+          </Can>
         </q-td>
       </template>
     </q-table>
@@ -166,6 +174,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
+import { ability } from 'src/services/ability'
 import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -329,6 +338,14 @@ async function loadSalidas() {
 }
 
 function openDialog(row = null) {
+  if (row && !ability.can('update', 'Lavanderia')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para editar solicitudes de lavandería.', 'warning')
+    return
+  }
+  if (!row && !ability.can('create', 'Lavanderia')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para crear solicitudes de lavandería.', 'warning')
+    return
+  }
   if (row) {
     editing.value = true
     editingUuid.value = row.uuid
@@ -374,6 +391,15 @@ function generarNumeroRemision() {
 }
 
 async function saveLavanderia() {
+  if (editing.value && !ability.can('update', 'Lavanderia')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para actualizar solicitudes de lavandería.', 'warning')
+    return
+  }
+  if (!editing.value && !ability.can('create', 'Lavanderia')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para crear solicitudes de lavandería.', 'warning')
+    return
+  }
+
   try {
     const selectedProgramacion = programaciones.value.find(p => p.uuid === form.value.referencia)
     const payload = {
@@ -407,6 +433,11 @@ async function saveLavanderia() {
 }
 
 async function deleteRegistro(uuid) {
+  if (!ability.can('delete', 'Lavanderia')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para eliminar solicitudes de lavandería.', 'warning')
+    return
+  }
+
   const result = await Swal.fire({
     title: '¿Estás seguro?',
     text: 'Esta acción no se puede deshacer',
@@ -431,6 +462,11 @@ async function deleteRegistro(uuid) {
 }
 
 async function emitirRemision(row) {
+  if (!ability.can('detail', 'Lavanderia')) {
+    Swal.fire('Permiso denegado', 'No tienes permiso para emitir remisiones de lavandería.', 'warning')
+    return
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
       <h1 style="text-align: center; color: #333;">Remisión de Lavandería</h1>

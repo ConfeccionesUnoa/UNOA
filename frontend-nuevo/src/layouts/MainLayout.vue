@@ -47,17 +47,19 @@
           <q-item-label header class="drawer-header">Menú Principal</q-item-label>
           
           <!-- Inicio -->
-          <q-item clickable :to="{ name: 'index' }" exact v-ripple exact-active-class="drawer-active">
-            <q-item-section avatar>
-              <q-icon name="home" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>Inicio</q-item-label>
-            </q-item-section>
-          </q-item>
+          <Can I="read" a="Inicio">
+            <q-item clickable :to="{ name: 'index' }" exact v-ripple exact-active-class="drawer-active">
+              <q-item-section avatar>
+                <q-icon name="home" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Inicio</q-item-label>
+              </q-item-section>
+            </q-item>
+          </Can>
 
           <!-- Usuarios (Desplegable) -->
-          <Can I="read" a="'Usuarios'">
+          <Can I="read" a="Usuarios">
             <q-expansion-item icon="group" label="Usuarios">
               <q-list separator padding style="background: #f5f5f5;">
                 <q-item clickable :to="{ name: 'usuarios' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
@@ -73,37 +75,39 @@
           </Can>
 
           <!-- Parámetros (Desplegable) -->
-          <q-expansion-item icon="settings" label="Parámetros">
-            <q-list separator padding style="background: #f5f5f5;">
-              <q-item clickable :to="{ name: 'proveedores' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
-                <q-item-section avatar>
-                  <q-icon name="tune" size="sm" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Proveedores</q-item-label>
-                </q-item-section>
-              </q-item>
-              <q-item clickable :to="{ name: 'categorias' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
-                <q-item-section avatar>
-                  <q-icon name="category" size="sm" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Categorías</q-item-label>
-                </q-item-section>
-              </q-item>
-              <q-item clickable :to="{ name: 'clientes' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
-                <q-item-section avatar>
-                  <q-icon name="business" size="sm" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Clientes</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </q-expansion-item>
+          <Can I="read" a="Parametros">
+            <q-expansion-item icon="settings" label="Parámetros">
+              <q-list separator padding style="background: #f5f5f5;">
+                <q-item clickable :to="{ name: 'proveedores' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="tune" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Proveedores</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item clickable :to="{ name: 'categorias' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="category" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Categorías</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item clickable :to="{ name: 'clientes' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="business" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Clientes</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-expansion-item>
+          </Can>
 
           <!-- Inventario -->
-          <Can I="read" a="'Inventario'">
+          <Can I="read" a="Inventario">
             <q-item clickable :to="{ name: 'inventario' }" exact v-ripple exact-active-class="drawer-active">
               <q-item-section avatar>
                 <q-icon name="inventory_2" />
@@ -117,7 +121,7 @@
           <!-- Procesos (Desplegable) -->
           <q-expansion-item icon="precision_manufacturing" label="Procesos">
             <q-list separator padding style="background: #f5f5f5;">
-              <Can I="read" a="'Programacion'">
+              <Can I="read" a="Programacion">
                 <q-item clickable :to="{ name: 'programacion' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
                   <q-item-section avatar>
                     <q-icon name="calendar_month" size="sm" />
@@ -128,7 +132,7 @@
                 </q-item>
               </Can>
               
-              <Can I="read" a="'Corte'">
+              <Can I="read" a="Corte">
                 <q-item clickable :to="{ name: 'corte' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
                   <q-item-section avatar>
                     <q-icon name="content_cut" size="sm" />
@@ -139,14 +143,16 @@
                 </q-item>
               </Can>
 
-              <q-item clickable :to="{ name: 'lavanderia' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
-                <q-item-section avatar>
-                  <q-icon name="local_laundry_service" size="sm" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Lavandería</q-item-label>
-                </q-item-section>
-              </q-item>
+              <Can I="read" a="Lavanderia">
+                <q-item clickable :to="{ name: 'lavanderia' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
+                  <q-item-section avatar>
+                    <q-icon name="local_laundry_service" size="sm" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Lavandería</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </Can>
 
               <Can I="read" a="'Presentacion'">
                 <q-item clickable :to="{ name: 'presentacion' }" exact v-ripple exact-active-class="drawer-active" class="q-ml-md">
@@ -235,6 +241,7 @@ import { ref, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import { useAuthStore } from 'src/stores/auth'
 import { useRouter } from 'vue-router'
+import { AbilityBuilder } from '@casl/ability'
 import { ability } from 'src/services/ability'
 
 const auth = useAuthStore()
@@ -300,16 +307,34 @@ async function onEdit() {
 
 function setAbilities(rol) {
   if (!rol) return
-  if (rol === 'AD') {
-    ability.update([{
-      action: 'manage',
-      subject: 'all'
-    }])
-    
+
+  const { can, rules } = new AbilityBuilder(ability.constructor)
+
+  switch (rol) {
+    case 'AD':
+      can('manage', 'all')
+      break
+    case 'CO':
+      can(['read'], ['Programacion', 'Corte', 'Presentacion', 'Lavanderia', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], 'Corte')
+      break
+    case 'IN':
+      can(['read'], ['Programacion', 'Corte', 'Presentacion', 'Lavanderia', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], 'Programacion')
+      break
+    case 'PR':
+      can(['read'], ['Corte', 'Programacion', 'Lavanderia', 'Presentacion', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], ['Lavanderia', 'Presentacion'])
+      break
+    case 'PL':
+      can(['read'], ['Corte', 'Programacion', 'Lavanderia', 'Presentacion', 'Inventario'])
+      can(['create', 'update', 'delete', 'detail', 'finish'], 'Corte')
+      break
+    default:
+      break
   }
-  else {
-    ability.update([{ action: 'read', subject: 'Usuarios' }])
-  }
+
+  ability.update(rules)
 }
 
 onMounted(() => {

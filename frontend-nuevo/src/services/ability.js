@@ -1,10 +1,7 @@
 import { defineAbility } from '@casl/ability'
 
-const ability = defineAbility((can,) => { // cannot (no lo uso aún)
-  can(
-    ['create', 'read', 'update', 'delete', 'detail', 'finish'],
-    ['Usuarios', 'Inventario', 'Programacion']
-  )
+const ability = defineAbility(() => {
+  // permisos abiertos por rol se configuran en LoginPage y MainLayout con ability.update(rules)
 })
 
 export default ability

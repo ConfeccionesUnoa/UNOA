@@ -285,7 +285,7 @@ async function onEdit() {
             first_name: first_name.value,
             last_name: last_name.value,
             email: email.value,
-            rol: auth.rol
+            rol: rol.value
         })
         toolbar.value = false
         loadTable()

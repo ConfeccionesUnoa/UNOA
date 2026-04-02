@@ -16,8 +16,17 @@ class Usuario(AbstractUser, TimeStampedModel):
     Representa un Usuario en el sistema
     """
     ROL_ADMINISTRADOR = 'AD'
+    ROL_CORTES = 'CO'
+    ROL_INGENIERIA = 'IN'
+    ROL_PRESENTACION = 'PR'
+    ROL_PLANIFICACION = 'PL'
+
     ROLES = (
         (ROL_ADMINISTRADOR, 'Administrador'),
+        (ROL_CORTES, 'Corte'),
+        (ROL_INGENIERIA, 'Ingeniero'),
+        (ROL_PRESENTACION, 'Presentación'),
+        (ROL_PLANIFICACION, 'Planeación'),
     )
     uuid = models.UUIDField(
         db_index=True,
