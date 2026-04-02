@@ -159,8 +159,8 @@ JWT_AUTH = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
-EMAIL_HOST = 'host mx'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'usuario'
-EMAIL_HOST_PASSWORD = 'clave'
-DEFAULT_FROM_EMAIL = 'cuenta_correo'
+EMAIL_HOST_USER = 'tecnologia.confeccionesunoa@gmail.com'
+EMAIL_HOST_PASSWORD = 'Confecciones2026!'
+DEFAULT_FROM_EMAIL = 'tecnologia.confeccionesunoa@gmail.com'
