@@ -1,5 +1,7 @@
 import uuid
 
+import threading
+import logging
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
@@ -9,6 +11,8 @@ from django.core.mail import send_mail
 from model_utils.models import TimeStampedModel
 from .managers import UsuarioManager
 from .utils import generar_cadena_aleatoria
+
+logger = logging.getLogger(__name__)
 
 
 class Usuario(AbstractUser, TimeStampedModel):
@@ -82,5 +86,12 @@ class Usuario(AbstractUser, TimeStampedModel):
         self.enviar_mail(asunto, mensaje)
 
     def enviar_mail(self, asunto, mensaje):
-        send_mail(asunto, mensaje, settings.DEFAULT_FROM_EMAIL, [self.email], html_message=mensaje,
-                  fail_silently=False)
+        def _send():
+            try:
+                send_mail(asunto, mensaje, settings.DEFAULT_FROM_EMAIL, [self.email], html_message=mensaje,
+                          fail_silently=False)
+                logger.info('Email enviado a %s', self.email)
+            except Exception as e:
+                logger.error('Error enviando email a %s: %s', self.email, str(e), exc_info=True)
+
+        threading.Thread(target=_send, daemon=True).start()
