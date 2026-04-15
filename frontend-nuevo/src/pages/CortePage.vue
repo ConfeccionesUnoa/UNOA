@@ -506,8 +506,8 @@ function calculateMetrics(index) {
   // mtrs_consumidos = promedio * unidades_cortadas
   if (detalle.promedio && detalle.unidades_cortadas) {
     const rawMtrs = Number(detalle.promedio) * Number(detalle.unidades_cortadas)
-    // guardar con hasta 8 dígitos totales y 2 decimales en la parte fraccional
-    detalle.mtrs_consumidos = Number(rawMtrs.toFixed(6))
+    // guardar con 2 decimales para coincidir con el campo DecimalField del backend
+    detalle.mtrs_consumidos = Number(rawMtrs.toFixed(2))
   }
   actualizarTotalesDetalle()
 }
@@ -521,7 +521,7 @@ function calculateTallaTotal() {
     (tallas.value.t46 || 0)
   // si la selección de ref trae tallas, también setear totales en form (opcional)
   form.value.total_unidades = detalles.value.reduce((sum, d) => sum + (Number(d.unidades_cortadas) || 0), 0)
-  form.value.total_metros_consumidos = detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0)
+  form.value.total_metros_consumidos = Number(detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0).toFixed(2))
   actualizarCalculosAutomaticos()
 }
 
@@ -529,23 +529,23 @@ function actualizarCalculosAutomaticos() {
   // ========== SECCIÓN: Totales y consumo ==========
   // Promedio: total metros consumidos / total unidades cortadas
   if (form.value.total_unidades > 0) {
-    form.value.promedio = Number((form.value.total_metros_consumidos / form.value.total_unidades).toFixed(3))
+    form.value.promedio = Number((form.value.total_metros_consumidos / form.value.total_unidades).toFixed(2))
   } else {
     form.value.promedio = 0
   }
 
   // Sobrante de tela (sección principal): mtrs enviados - total metros consumidos - faltante de tela
-  form.value.sobrante_tela = Number((form.value.mtrs_enviados - form.value.total_metros_consumidos - form.value.faltante_tela).toFixed(3))
+  form.value.sobrante_tela = Number((form.value.mtrs_enviados - form.value.total_metros_consumidos - form.value.faltante_tela).toFixed(2))
 
   // Mtrs retazos: mtrs enviados - total metros consumidos - faltante de tela (IGUAL al sobrante_tela de la sección principal)
   form.value.mtrs_retazos = form.value.sobrante_tela
 
   // ========== SECCIÓN: Consumo tela (de bolsillo) ==========
   // Metros gastados: promedio consumo * total unidades cortadas
-  form.value.consumo_metros_gastados = Number((form.value.consumo_promedio * form.value.total_unidades).toFixed(3))
+  form.value.consumo_metros_gastados = Number((form.value.consumo_promedio * form.value.total_unidades).toFixed(2))
 
   // Sobrante de tela (sección consumo): cantidad - metros gastados - faltante de tela consumo
-  consumoData.value.sobrante_tela = Number((form.value.consumo_cantidad - form.value.consumo_metros_gastados - consumoData.value.faltante_tela).toFixed(3))
+  consumoData.value.sobrante_tela = Number((form.value.consumo_cantidad - form.value.consumo_metros_gastados - consumoData.value.faltante_tela).toFixed(2))
 }
 
 function nextState(current) {
@@ -743,7 +743,7 @@ function exportCorte(mode) {
 
 function actualizarTotalesDetalle() {
   form.value.total_unidades = detalles.value.reduce((sum, d) => sum + (Number(d.unidades_cortadas) || 0), 0)
-  form.value.total_metros_consumidos = Number(detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0).toFixed(6))
+  form.value.total_metros_consumidos = Number(detalles.value.reduce((sum, d) => sum + (Number(d.mtrs_consumidos) || 0), 0).toFixed(2))
   actualizarCalculosAutomaticos()
 }
 
@@ -765,10 +765,10 @@ async function submit() {
         numero: Number(d.numero) || 0,
         proporcion: String(d.proporcion || '').trim(),
         unidades_cortadas: Number(d.unidades_cortadas) || 0,
-        ancho: Number(safe(d.ancho).toFixed(6)),
-        largo: Number(safe(d.largo).toFixed(6)),
+        ancho: Number(safe(d.ancho).toFixed(2)),
+        largo: Number(safe(d.largo).toFixed(2)),
         promedio: Number(promedio.toFixed(2)),
-        mtrs_consumidos: Number(mtrs_consumidos.toFixed(6)),
+        mtrs_consumidos: Number(mtrs_consumidos.toFixed(2)),
         color: d.color || ''
       }
     })
@@ -785,7 +785,7 @@ async function submit() {
       return
     }
 
-    if (!Number.isFinite(detalle.mtrs_consumidos) || Number(detalle.mtrs_consumidos).toFixed(6).replace('.', '').length > 8) {
+    if (!Number.isFinite(detalle.mtrs_consumidos) || Number(detalle.mtrs_consumidos).toFixed(2).replace('.', '').length > 8) {
       Swal.fire('Error', `Fila ${idx + 1}: metros consumidos debe tener máximo 8 dígitos totales (incluye enteros y decimales).`, 'error')
       return
     }
