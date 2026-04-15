@@ -74,7 +74,7 @@ class Usuario(AbstractUser, TimeStampedModel):
         self.enviar_datos_acceso(password)
 
     def enviar_datos_acceso(self, password):
-        asunto = 'Presupuesto participativo - Datos de acceso'
+        asunto = 'Confecciones UNOA - Datos de acceso'
         datos = {
             'nombre_completo': self.get_full_name(),
             'username': self.username,
