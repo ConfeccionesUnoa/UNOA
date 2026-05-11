@@ -25,10 +25,10 @@
             <template v-slot:body-cell-acciones="props">
               <q-td align="right">
                 <Can I="read" an="Corte">
-                  <q-btn dense flat icon="visibility" color="primary" @click.stop="openEdit(props.row)" v-ripple title="Ver / Editar" :disable="esCorteFinalizado(props.row)" />
+                  <q-btn dense flat icon="visibility" color="primary" @click.stop="openEdit(props.row, true)" v-ripple title="Ver / Editar" :disable="esCorteFinalizado(props.row)" />
                 </Can>
                 <Can I="update" an="Corte">
-                  <q-btn dense flat icon="edit" color="accent" @click.stop="openEdit(props.row)" v-ripple title="Editar" :disable="esCorteFinalizado(props.row)" />
+                  <q-btn dense flat icon="edit" color="accent" @click.stop="openEdit(props.row, false)" v-ripple title="Editar" :disable="esCorteFinalizado(props.row)" />
                 </Can>
                 <Can I="finish" an="Corte">
                   <q-btn dense flat icon="play_circle" color="orange" @click.stop="openEstadoDialog(props.row)" v-ripple title="Avanzar proceso" :disable="esCorteFinalizado(props.row)" />
@@ -94,7 +94,7 @@
       <q-dialog v-model="dialog" persistent>
         <q-card style="width: 900px; max-width: 95vw;">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Crear Informe de Corte</div>
+            <div class="text-h6">{{ dialogTitle }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup @click="dialog=false" />
           </q-card-section>
@@ -113,27 +113,28 @@
                     dense
                     emit-value
                     map-options
+                    :disable="isView"
                     @update:model-value="(prog) => { console.log('q-select update prog:', prog); cargarProgramacionSeleccionada(prog); }"
                   />
                 </div>
                 <div class="col-xs-6">
-                  <q-input filled v-model="form.fecha" label="FECHA" dense type="date" />
+                  <q-input filled v-model="form.fecha" label="FECHA" dense type="date" :disable="isView" />
                 </div>
               </div>
               <div class="row q-col-gutter-md q-mt-sm">
                 <div class="col-xs-6">
-                  <q-input filled v-model="form.tercero" label="NOMBRE TERCERO" dense />
+                  <q-input filled v-model="form.tercero" label="NOMBRE TERCERO" dense :disable="isView" />
                 </div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-6"><q-input filled v-model="form.tela" label="TELA" dense /></div>
-                <div class="col-xs-6"><q-input filled v-model.number="form.mtrs_enviados" label="MTRS DE TELA ENVIADA" dense type="number" /></div>
+                <div class="col-xs-6"><q-input filled v-model="form.tela" label="TELA" dense :disable="isView" /></div>
+                <div class="col-xs-6"><q-input filled v-model.number="form.mtrs_enviados" label="MTRS DE TELA ENVIADA" dense type="number" :disable="isView" /></div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-4"><q-input filled v-model="form.lote" label="LOTE" dense /></div>
-                <div class="col-xs-8"><q-input filled v-model="form.orden_produccion" label="ORDEN DE PRODUCCION" dense /></div>
+                <div class="col-xs-4"><q-input filled v-model="form.lote" label="LOTE" dense :disable="isView" /></div>
+                <div class="col-xs-8"><q-input filled v-model="form.orden_produccion" label="ORDEN DE PRODUCCION" dense :disable="isView" /></div>
               </div>
 
               <q-separator class="q-mt-md q-mb-md" />
@@ -152,12 +153,12 @@
               <!-- Data rows -->
               <div v-for="i in 10" :key="i" class="row q-col-gutter-md q-mt-sm items-center">
                 <div class="col-xs-1">
-                  <q-input dense v-model.number="detalles[i-1].numero" type="number" />
+                  <q-input dense v-model.number="detalles[i-1].numero" type="number" :disable="isView" />
                 </div>
-                <div class="col-xs-2"><q-input dense v-model.number="detalles[i-1].proporcion" type="number" @update:model-value="calculateMetrics(i-1)" /></div>
-                <div class="col-xs-2"><q-input dense v-model.number="detalles[i-1].unidades_cortadas" type="number" @update:model-value="calculateMetrics(i-1)" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="detalles[i-1].ancho" type="number" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="detalles[i-1].largo" type="number" @update:model-value="calculateMetrics(i-1)" /></div>
+                <div class="col-xs-2"><q-input dense v-model.number="detalles[i-1].proporcion" type="number" :disable="isView" @update:model-value="calculateMetrics(i-1)" /></div>
+                <div class="col-xs-2"><q-input dense v-model.number="detalles[i-1].unidades_cortadas" type="number" :disable="isView" @update:model-value="calculateMetrics(i-1)" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="detalles[i-1].ancho" type="number" :disable="isView" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="detalles[i-1].largo" type="number" :disable="isView" @update:model-value="calculateMetrics(i-1)" /></div>
                 <div class="col-xs-2"><q-input dense v-model.number="detalles[i-1].promedio" type="number" readonly class="bg-grey-2" /></div>
                 <div class="col-xs-2"><q-input dense v-model.number="detalles[i-1].mtrs_consumidos" type="number" readonly class="bg-grey-2" /></div>
               </div>
@@ -167,39 +168,39 @@
               <div class="text-subtitle2">Total unidades cortadas - Tallas</div>
               <div class="text-caption q-mb-sm">Tallas en letras (S, M, L, XL, XXL)</div>
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.s" label="S" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.m" label="M" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.l" label="L" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.xl" label="XL" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.xxl" label="XXL" type="number" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.s" label="S" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.m" label="M" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.l" label="L" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.xl" label="XL" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.xxl" label="XXL" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
               </div>
 
               <div class="text-caption q-mt-md q-mb-sm">Tallas numéricas (4 - 46)</div>
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t4" label="4" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t6" label="6" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t8" label="8" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t10" label="10" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t12" label="12" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t14" label="14" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t16" label="16" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t18" label="18" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t20" label="20" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t22" label="22" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t26" label="26" type="number" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t4" label="4" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t6" label="6" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t8" label="8" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t10" label="10" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t12" label="12" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t14" label="14" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t16" label="16" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t18" label="18" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t20" label="20" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t22" label="22" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t26" label="26" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t28" label="28" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t30" label="30" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t32" label="32" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t34" label="34" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t36" label="36" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t38" label="38" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t40" label="40" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t42" label="42" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t44" label="44" type="number" @update:model-value="calculateTallaTotal" /></div>
-                <div class="col-xs-1"><q-input dense v-model.number="tallas.t46" label="46" type="number" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t28" label="28" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t30" label="30" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t32" label="32" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t34" label="34" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t36" label="36" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t38" label="38" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t40" label="40" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t42" label="42" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t44" label="44" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
+                <div class="col-xs-1"><q-input dense v-model.number="tallas.t46" label="46" type="number" :disable="isView" @update:model-value="calculateTallaTotal" /></div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-md">
@@ -217,31 +218,31 @@
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-3"><q-input dense v-model.number="form.muestras" label="Muestras" type="number" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.faltante_tela" label="Faltante de tela" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.muestras" label="Muestras" type="number" :disable="isView" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.faltante_tela" label="Faltante de tela" type="number" :disable="isView" @update:model-value="actualizarCalculosAutomaticos" /></div>
                 <div class="col-xs-3"><q-input dense v-model.number="form.sobrante_tela" label="Sobrante de tela" type="number" readonly class="bg-grey-2" /></div>
-                <div class="col-xs-3"><q-input dense v-model="form.firma_responsable" label="Firma responsable" type="text" /></div>
+                <div class="col-xs-3"><q-input dense v-model="form.firma_responsable" label="Firma responsable" type="text" :disable="isView" /></div>
               </div>
 
               <q-separator class="q-mt-md q-mb-md" />
 
               <div class="text-subtitle2">Consumo tela (de bolsillo / combinado)</div>
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_cantidad" label="Cantidad" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_cantidad" label="Cantidad" type="number" :disable="isView" @update:model-value="actualizarCalculosAutomaticos" /></div>
                 <div class="col-xs-3"><q-input dense v-model.number="form.consumo_metros_gastados" label="Metros gastados" type="number" readonly class="bg-grey-2" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_ancho" label="Ancho" type="number" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_largo" label="Largo" type="number" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_ancho" label="Ancho" type="number" :disable="isView" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_largo" label="Largo" type="number" :disable="isView" /></div>
               </div>
 
               <div class="row q-col-gutter-md q-mt-sm">
-                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_promedio" label="Promedio consumo" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
-                <div class="col-xs-3"><q-input dense v-model.number="consumoData.faltante_tela" label="Faltante de tela" type="number" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="form.consumo_promedio" label="Promedio consumo" type="number" :disable="isView" @update:model-value="actualizarCalculosAutomaticos" /></div>
+                <div class="col-xs-3"><q-input dense v-model.number="consumoData.faltante_tela" label="Faltante de tela" type="number" :disable="isView" @update:model-value="actualizarCalculosAutomaticos" /></div>
                 <div class="col-xs-3"><q-input dense v-model.number="consumoData.sobrante_tela" label="Sobrante de tela" type="number" readonly class="bg-grey-2" /></div>
               </div>
 
               <q-card-actions align="right">
                 <q-btn label="Cancelar" v-close-popup color="negative" flat @click="dialog=false" />
-                <q-btn label="Guardar" color="primary" @click="submit" />
+                <q-btn label="Guardar" color="primary" :disable="isView" @click="submit" />
               </q-card-actions>
             </q-form>
           </q-card-section>
@@ -270,6 +271,12 @@ const filterCorte = ref('')
 const corteSeleccionado = ref(null)
 const exportDialog = ref(false)
 const corteParaExportar = ref(null)
+const isView = ref(false)
+const dialogTitle = computed(() => {
+  if (isView.value) return 'Ver Corte'
+  if (editing.value) return 'Editar Corte'
+  return 'Crear Informe de Corte'
+})
 const form = ref({
   tercero: '', fecha: '', tela: '', mtrs_enviados: 0, lote: '', orden_produccion: '', notas: '',
   total_unidades: 0,
@@ -402,6 +409,7 @@ function openDialog() {
 
   editing.value = false
   editingUuid.value = null
+  isView.value = false
   programacionSeleccionada.value = null
   form.value = { tercero: '', fecha: '', tela: '', mtrs_enviados: 0, lote: '', orden_produccion: '', notas: '',
     total_unidades: 0, total_metros_consumidos: 0, mtrs_retazos: 0, promedio: 0, muestras: 0, faltante_tela: 0, sobrante_tela: 0,
@@ -413,12 +421,13 @@ function openDialog() {
   dialog.value = true
 }
 
-function openEdit(row) {
+function openEdit(row, viewMode = false) {
   if (!ability.can('read', 'Corte') && !ability.can('update', 'Corte')) {
     Swal.fire('Permiso denegado', 'No tienes permiso para ver o editar cortes.', 'warning')
     return
   }
 
+  isView.value = viewMode
   editing.value = true
   editingUuid.value = row.uuid
   // llenar form con datos del registro
@@ -432,6 +441,12 @@ function openEdit(row) {
     consumo_largo: parseFloat(row.consumo_largo) || 0, consumo_promedio: parseFloat(row.consumo_promedio) || 0,
     sobrante_tela: parseFloat(row.sobrante_tela) || 0, firma_responsable: row.firma_responsable || '',
     estado: row.estado || 'RECIBO', fecha_estado: row.fecha_estado || ''
+  }
+
+  // Setear la referencia seleccionada
+  const prog = programacionesDisponibles.value.find(p => p.numero_orden === row.orden_produccion)
+  if (prog) {
+    programacionSeleccionada.value = prog.uuid
   }
 
   // tallas -> intentar parsear JSON
