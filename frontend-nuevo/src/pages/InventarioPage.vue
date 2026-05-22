@@ -713,13 +713,26 @@ async function downloadExcel() {
         return
     }
 
-    const headers = columns.value.map(c => ({ key: c.field || c.name, label: c.label }))
+    const exportColumns = columns.value.filter(c => !['agregar', 'edit', 'delete'].includes(c.name))
     const sheetData = rows.map(r => {
         const obj = {}
-        headers.forEach(h => {
-            const key = h.key
-            const value = (r[key] !== undefined && r[key] !== null) ? (typeof r[key] === 'object' ? (r[key].nombre || JSON.stringify(r[key])) : r[key]) : ''
-            obj[h.label] = value
+        exportColumns.forEach(c => {
+            let value = ''
+            if (typeof c.field === 'function') {
+                value = c.field(r)
+            } else if (typeof c.field === 'string') {
+                value = r[c.field]
+            } else {
+                value = r[c.name]
+            }
+
+            if (value === undefined || value === null) {
+                value = ''
+            } else if (typeof value === 'object') {
+                value = value.nombre ?? JSON.stringify(value)
+            }
+
+            obj[c.label] = value
         })
         return obj
     })

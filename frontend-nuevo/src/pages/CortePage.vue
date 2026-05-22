@@ -478,10 +478,16 @@ function openEdit(row, viewMode = false) {
   })
   
   // Cargar datos de consumo al editar
+  // Inicializar datos de consumo con valores del registro (cuando existan)
   consumoData.value = {
     faltante_tela: 0,
-    sobrante_tela: 0
+    sobrante_tela: parseFloat(row.sobrante_tela) || 0
   }
+
+  // Asegurar que los campos derivados (promedio, mtrs_consumidos) se recalculen
+  // y luego actualizar los totales del formulario
+  detalles.value.forEach((_, idx) => calculateMetrics(idx))
+  actualizarTotalesDetalle()
 
   dialog.value = true
 }
